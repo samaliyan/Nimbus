@@ -74,6 +74,9 @@ class NimbusService : VpnService() {
         /** True from the service's creation to its destruction. */
         @Volatile private var alive = false
 
+        /** Counts service instances, so a late cleanup of an old one leaves a newer one alone. */
+        @Volatile private var instances = 0
+
         fun start(context: Context) = send(context, ACTION_START)
         fun stop(context: Context) = send(context, ACTION_STOP)
         fun restart(context: Context) = send(context, ACTION_RESTART)
@@ -106,6 +109,10 @@ class NimbusService : VpnService() {
     private var probeJob: Job? = null
     @Volatile private var lastStartId = 0
 
+    /** The start id of the command now running on the control thread. */
+    private var handledStartId = 0
+    private var instance = 0
+
     // Proxy mode takes its traffic from the core's own counters.
     private var lastStatsAt = 0L
     private var lastUp = 0L
@@ -121,6 +128,7 @@ class NimbusService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         alive = true
+        instance = ++instances
         SettingsStore.init(this)
         scope.launch(control) {
             for ((gen, event) in events) if (gen == generation) apply(event)
@@ -132,33 +140,43 @@ class NimbusService : VpnService() {
         // Started as a foreground service: it has to say so right away, whatever it then does.
         goForeground(notification(Tunnel.state.value))
         when (intent?.action) {
-            ACTION_STOP -> scope.launch(control) { shutdown(TunnelState.Idle, startId) }
+            ACTION_STOP -> scope.launch(control) {
+                handledStartId = startId
+                shutdown(TunnelState.Idle, startId)
+            }
             ACTION_RESTART -> scope.launch(control) {
+                handledStartId = startId
                 teardown()
                 begin()
             }
             // ACTION_START, or the system starting an always-on VPN (action android.net.VpnService).
-            else -> scope.launch(control) { if (!Tunnel.state.value.isActive) begin() }
+            else -> scope.launch(control) {
+                handledStartId = startId
+                if (!Tunnel.state.value.isActive) begin()
+            }
         }
         return START_NOT_STICKY
     }
 
     override fun onRevoke() {
         // Another VPN took over, or the user turned this one off in system settings.
-        val id = lastStartId
-        scope.launch(control) { shutdown(TunnelState.Idle, id) }
+        scope.launch(control) { shutdown(TunnelState.Idle, handledStartId) }
     }
 
     override fun onDestroy() {
         alive = false
         scope.cancel()
         // Cleanup waits for a command still running, on the control thread, not the main one.
+        val me = instance
         executor.execute {
             generation++
-            stopNative()
-            runner?.stop()
+            // A newer service may already run a connection: then only this one's own core is
+            // stopped, and the shared tunnel, stray-process sweep and state are left to it.
+            val newest = me == instances
+            if (newest) stopNative()
+            runner?.stop(sweep = newest)
             runner = null
-            if (Tunnel.state.value.isActive || Tunnel.state.value == TunnelState.Stopping) {
+            if (newest && (Tunnel.state.value.isActive || Tunnel.state.value == TunnelState.Stopping)) {
                 Tunnel.setState(TunnelState.Idle)
             }
         }
@@ -334,7 +352,7 @@ class NimbusService : VpnService() {
 
     private fun fail(message: String) {
         Tunnel.note(message, Level.ERROR)
-        shutdown(TunnelState.Failed(message), lastStartId)
+        shutdown(TunnelState.Failed(message), handledStartId)
     }
 
     /** Stops everything this connection started, leaving the service itself running. */
@@ -360,10 +378,8 @@ class NimbusService : VpnService() {
         teardown()
         Tunnel.setState(final)
         Tunnel.startedWith = null
-        if (startId == lastStartId) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelfResult(startId)
-        }
+        // stopSelfResult refuses when a newer start has arrived; that start is still to run.
+        if (stopSelfResult(startId)) stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     private fun stopNative() {
@@ -503,10 +519,15 @@ class NimbusService : VpnService() {
             while (isActive) {
                 val exit = Probe.exit(port)
                 val ms = if (exit != null) Probe.latency(port) else null
-                // A probe that outlived its connection must not write into the next one.
+                // A probe that outlived its connection must not write into the next one; the
+                // check and the write happen together on the control thread.
                 if (gen != generation) break
-                if (exit != null) Tunnel.setExit(exit)
-                Tunnel.setLatency(ms)
+                launch(control) {
+                    if (gen == generation) {
+                        if (exit != null) Tunnel.setExit(exit)
+                        Tunnel.setLatency(ms)
+                    }
+                }
                 delay(if (exit != null) 5 * 60_000L else 20_000L)
             }
         }

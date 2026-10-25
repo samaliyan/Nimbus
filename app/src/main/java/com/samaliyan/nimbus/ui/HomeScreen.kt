@@ -208,14 +208,15 @@ fun HomeScreen(
                     testing = testing,
                     onTest = {
                         // The result belongs to this connection; one that ended meanwhile drops it.
-                        val session = Tunnel.startedWith ?: return@ExitRow
+                        val started = Tunnel.startedWith ?: return@ExitRow
+                        val session = Tunnel.session
                         testing = true
                         scope.launch {
-                            val port = session.socksPort
+                            val port = started.socksPort
                             val e = withContext(Dispatchers.IO) { Probe.exit(port) }
                             val ms = if (e != null) withContext(Dispatchers.IO) { Probe.latency(port) } else null
                             testing = false
-                            if (Tunnel.startedWith !== session || !Tunnel.state.value.isActive) return@launch
+                            if (Tunnel.session != session || !Tunnel.state.value.isActive) return@launch
                             if (e != null) Tunnel.setExit(e)
                             Tunnel.setLatency(ms)
                             if (e == null) snackbar.showSnackbar(context.getString(R.string.test_failed))

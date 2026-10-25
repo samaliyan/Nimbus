@@ -47,12 +47,13 @@ object Updater {
     private var job: kotlinx.coroutines.Job? = null
 
     fun startCheck(quiet: Boolean) {
-        if (job?.isActive == true) return
+        if (job?.isCompleted == false) return
         job = scope.launch { check(quiet) }
     }
 
     fun startDownload(context: Context, release: Release) {
-        if (job?.isActive == true) return
+        // A cancelled download may still be finishing its last read; never run two at once.
+        if (job?.isCompleted == false) return
         job = scope.launch { download(context.applicationContext, release) }
     }
 
@@ -61,8 +62,8 @@ object Updater {
 
     /** Closes the dialog; a check or download still running is cancelled with it. */
     fun dismiss() {
+        // The job is kept: until it has really ended, no new one starts beside it.
         job?.cancel()
-        job = null
         _state.value = UpdateState.Idle
     }
 
@@ -99,6 +100,7 @@ object Updater {
             } finally {
                 c.disconnect()
             }
+            coroutineContext.ensureActive()
             _state.value = when {
                 release == null -> if (quiet) UpdateState.Idle else UpdateState.Failed("no apk in the latest release")
                 ReleaseParser.isNewer(release.version, BuildConfig.VERSION_NAME) -> UpdateState.Available(release)
@@ -108,6 +110,8 @@ object Updater {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
+            // A request cut short by Cancel ends in an IOException; it is not a failure to show.
+            coroutineContext.ensureActive()
             _state.value = if (quiet) UpdateState.Idle else UpdateState.Failed(e.message ?: e.javaClass.simpleName)
         }
     }
@@ -164,12 +168,14 @@ object Updater {
             c.disconnect()
             if (total > 0 && done != total) throw IllegalStateException("download incomplete")
             if (!part.renameTo(target)) throw IllegalStateException("cannot save the file")
+            coroutineContext.ensureActive()
             _state.value = UpdateState.Ready(release, target)
         } catch (e: kotlinx.coroutines.CancellationException) {
             part.delete()
             throw e
         } catch (e: Exception) {
             part.delete()
+            coroutineContext.ensureActive()
             _state.value = UpdateState.Failed(e.message ?: e.javaClass.simpleName)
         }
     }

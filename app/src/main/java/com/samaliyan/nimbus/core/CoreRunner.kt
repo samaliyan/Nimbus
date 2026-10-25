@@ -45,7 +45,7 @@ class CoreRunner(private val workDir: File, private val binaries: Collection<Str
     }
 
     /** Asks the core to end (SIGTERM), then forces it after a few seconds. */
-    fun stop() {
+    fun stop(sweep: Boolean = true) {
         val p = process ?: return
         stopping = true
         p.destroy()
@@ -55,7 +55,7 @@ class CoreRunner(private val workDir: File, private val binaries: Collection<Str
         }
         process = null
         // A core forced to end leaves psiphon or lyrebird it started behind.
-        killStray()
+        if (sweep) killStray()
     }
 
     /**

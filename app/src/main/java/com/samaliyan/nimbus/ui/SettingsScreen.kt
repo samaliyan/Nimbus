@@ -109,7 +109,7 @@ fun SettingsScreen(onPickApps: () -> Unit, snackbar: SnackbarHostState) {
             RowDivider()
             SwitchRow(stringResource(R.string.set_http), s.httpProxy, stringResource(R.string.set_http_hint)) { v ->
                 // Turning HTTP on must not leave it on the SOCKS port.
-                set { it.copy(httpProxy = v, httpPort = if (v && it.httpPort == it.socksPort) (it.socksPort % 65535) + 1 else it.httpPort) }
+                set { it.copy(httpProxy = v, httpPort = if (v && it.httpPort == it.socksPort) if (it.socksPort < 65535) it.socksPort + 1 else it.socksPort - 1 else it.httpPort) }
             }
             if (s.httpProxy) {
                 RowDivider()

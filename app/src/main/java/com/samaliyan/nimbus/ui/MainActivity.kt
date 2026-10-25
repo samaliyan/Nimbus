@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SettingsStore.init(this)
         appliedLang = SettingsStore.current.lang
+        restartAfterConsent = savedInstanceState?.getBoolean("restartAfterConsent") ?: false
 
         lifecycleScope.launch {
             SettingsStore.settings.map { it.lang }.distinctUntilChanged().collect { lang ->
@@ -146,6 +147,11 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("restartAfterConsent", restartAfterConsent)
     }
 
     override fun onNewIntent(intent: Intent) {

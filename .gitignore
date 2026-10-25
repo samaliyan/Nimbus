@@ -8,3 +8,4 @@ app/src/main/jniLibs/
 *.jks
 *.keystore
 captures/
+__pycache__/

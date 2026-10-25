@@ -67,7 +67,12 @@ object Tunnel {
     fun setExit(e: ExitInfo?) { _exit.value = e }
     fun setLatency(ms: Long?) { _latency.value = ms }
 
+    /** Grows by one per connection; a result from an older connection is dropped. */
+    @Volatile var session = 0
+        private set
+
     fun resetSession() {
+        session++
         _traffic.value = Traffic()
         _exit.value = null
         _latency.value = null
