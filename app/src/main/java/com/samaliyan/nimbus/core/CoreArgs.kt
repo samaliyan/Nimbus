@@ -155,11 +155,17 @@ object Validate {
         return t.isEmpty() || (t.length == 2 && t.all { it.isLetter() && it.code < 128 })
     }
 
+    /**
+     * Extra options must be balanced in quotes and must not move the proxy: the app checks,
+     * shows and tunnels to the address it set itself.
+     */
     fun extraArgs(text: String): Boolean {
         var quote: Char? = null
         for (c in text) {
             if (quote != null) { if (c == quote) quote = null } else if (c == '"' || c == '\'') quote = c
         }
-        return quote == null
+        if (quote != null) return false
+        val owned = setOf("--bind", "--http-proxy")
+        return CoreArgs.splitArgs(text).none { arg -> owned.any { arg == it || arg.startsWith("$it=") } }
     }
 }

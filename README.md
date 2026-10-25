@@ -30,7 +30,7 @@ Nimbus is a simple Android client for the [Aether](https://github.com/CluvexStud
 
 ### How it is built
 
-Every push builds the app on GitHub Actions: the official Aether Android binaries of the latest release are downloaded and checked against the release's `SHA256SUMS.txt`, hev-socks5-tunnel is built from a pinned commit with the NDK, unit tests run, every command line the app can produce is run against the real core, and the APK is installed on an emulator that connects for real and sends traffic through the VPN and the proxy before a release is published. A daily job rebuilds when Aether publishes a new core.
+Every push to `main` builds the app on GitHub Actions: the official Aether Android binaries of the latest release are downloaded and checked against the release's `SHA256SUMS.txt`, hev-socks5-tunnel is built from a pinned commit with the NDK, unit tests run, a representative set of the command lines the app builds is run against the real core, and the APK is installed on an emulator that connects for real and sends traffic through the VPN and the proxy. A release is published only when that emulator check passes and the signing key is set in the repository secrets. A daily job rebuilds when Aether publishes a new core. Screenshots and logs of the latest emulator run are on the [`ci-report`](../../tree/ci-report) branch.
 
 ### Licence
 

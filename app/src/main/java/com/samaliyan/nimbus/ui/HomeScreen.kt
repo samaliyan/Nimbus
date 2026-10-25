@@ -20,11 +20,12 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -120,6 +121,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val active = state.isActive
+    var testing by remember { mutableStateOf(false) }
 
     // A connection started with other settings than the current ones needs a reconnect to use them.
     val started = Tunnel.startedWith
@@ -202,13 +204,18 @@ fun HomeScreen(
                     exitIp = exit?.ip,
                     country = exit?.country,
                     latency = latency,
+                    testing = testing,
                     onTest = {
+                        // The result belongs to this connection; one that ended meanwhile drops it.
+                        val session = Tunnel.startedWith ?: return@ExitRow
+                        testing = true
                         scope.launch {
-                            val port = Tunnel.startedWith?.socksPort ?: settings.socksPort
-                            Tunnel.setLatency(null)
+                            val port = session.socksPort
                             val e = withContext(Dispatchers.IO) { Probe.exit(port) }
+                            val ms = if (e != null) withContext(Dispatchers.IO) { Probe.latency(port) } else null
+                            testing = false
+                            if (Tunnel.startedWith !== session || !Tunnel.state.value.isActive) return@launch
                             if (e != null) Tunnel.setExit(e)
-                            val ms = withContext(Dispatchers.IO) { if (e != null) Probe.latency(port) else null }
                             Tunnel.setLatency(ms)
                             if (e == null) snackbar.showSnackbar(context.getString(R.string.test_failed))
                         }
@@ -429,7 +436,7 @@ private fun TrafficCell(modifier: Modifier, icon: androidx.compose.ui.graphics.v
 }
 
 @Composable
-private fun ExitRow(exitIp: String?, country: String?, latency: Long?, onTest: () -> Unit) {
+private fun ExitRow(exitIp: String?, country: String?, latency: Long?, testing: Boolean, onTest: () -> Unit) {
     val context = LocalContext.current
     val n = LocalNimbus.current
     Surface(
@@ -461,7 +468,7 @@ private fun ExitRow(exitIp: String?, country: String?, latency: Long?, onTest: (
                     style = MaterialTheme.typography.titleSmall,
                 )
             }
-            if (exitIp != null && latency == null) {
+            if (testing) {
                 Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 }
@@ -486,13 +493,17 @@ fun protocolName(p: Protocol): String = when (p) {
     Protocol.TOR -> "Tor"
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProtocolPicker(selected: Protocol, onSelect: (Protocol) -> Unit) {
     val n = LocalNimbus.current
     Column(Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.route), style = MaterialTheme.typography.labelLarge, color = n.muted)
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Protocol.entries.forEach { p ->
                 FilterChip(
                     selected = p == selected,

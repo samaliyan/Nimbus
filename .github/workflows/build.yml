@@ -18,7 +18,7 @@ on:
     - cron: "17 3 * * *"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: build-${{ github.ref }}
@@ -42,6 +42,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_TAG: ${{ inputs.aether_tag }}
+          HAS_KEY: ${{ secrets.SIGNING_KEYSTORE_B64 != '' }}
         run: |
           tag="$INPUT_TAG"
           if [ -z "$tag" ]; then
@@ -55,8 +56,10 @@ jobs:
             workflow_dispatch) release=${{ inputs.release }} ;;
             schedule)
               # The core version of the last release is in its notes.
+              # Without the signing key nothing could be released, so there is no point building.
+              if [ "$HAS_KEY" != "true" ]; then build=false; fi
               last=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .body 2>/dev/null || true)
-              if echo "$last" | grep -q "Aether core: $tag"; then build=false; else release=true; fi
+              if echo "$last" | grep -Fxq "Aether core: $tag"; then build=false; else release=true; fi
               ;;
           esac
           echo "build=$build" >> "$GITHUB_OUTPUT"
@@ -72,6 +75,8 @@ jobs:
       signed: ${{ steps.key.outputs.signed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@v4
         with:
@@ -138,11 +143,16 @@ jobs:
         run: |
           tag="${{ needs.decide.outputs.tag }}"
           mkdir -p build/linux-core
-          curl -fsSL "https://github.com/CluvexStudio/Aether/releases/download/$tag/aether-linux-x86_64.tar.gz" | tar -xz -C build/linux-core
+          base="https://github.com/CluvexStudio/Aether/releases/download/$tag"
+          curl -fsSL -o build/linux.tgz "$base/aether-linux-x86_64.tar.gz"
+          curl -fsSL -o build/sums.txt "$base/SHA256SUMS.txt"
+          (cd build && grep ' aether-linux-x86_64.tar.gz$' sums.txt | sed 's/aether-linux-x86_64.tar.gz/linux.tgz/' | sha256sum -c -)
+          tar -xzf build/linux.tgz -C build/linux-core
           tools/ci-run.sh python3 tools/check-args.py build/linux-core/aether app/build/core-args.jsonl
 
       - name: Collect APKs
         run: |
+          set -o pipefail
           mkdir -p dist
           for f in app/build/outputs/apk/release/*.apk; do
             abi=$(basename "$f" | sed -E 's/^app-(.*)-release\.apk$/\1/')
@@ -162,8 +172,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           name: apks
@@ -190,11 +204,25 @@ jobs:
       - name: Summary
         if: always()
         run: cat shots/results.md >> "$GITHUB_STEP_SUMMARY" || true
+      # Screenshots and logs also go to a branch, where they can be read with plain git.
+      - name: Publish the report to the ci-report branch
+        if: always() && github.event_name != 'pull_request'
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          [ -d shots ] || exit 0
+          cd shots
+          git init -q -b ci-report
+          git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Emulator report, run ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" ci-report
 
   release:
     needs: [decide, build, emulator]
     if: needs.decide.outputs.release == 'true' && needs.build.outputs.signed == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -222,4 +250,6 @@ jobs:
             echo "### Emulator check"
             cat shots/results.md
           } > notes.md
+          # A re-run of a run that already released has the same version; nothing to do.
+          if gh release view "v$VERSION" >/dev/null 2>&1; then echo "v$VERSION already released"; exit 0; fi
           gh release create "v$VERSION" dist/* --title "Nimbus $VERSION" --notes-file notes.md --target "$GITHUB_SHA"

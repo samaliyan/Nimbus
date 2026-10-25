@@ -44,15 +44,26 @@ object Updater {
     // Work outlives the screen that asked for it, so turning the phone does not cancel a download.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    fun startCheck(quiet: Boolean) { scope.launch { check(quiet) } }
+    private var job: kotlinx.coroutines.Job? = null
 
-    fun startDownload(context: Context, release: Release) { scope.launch { download(context.applicationContext, release) } }
+    fun startCheck(quiet: Boolean) {
+        if (job?.isActive == true) return
+        job = scope.launch { check(quiet) }
+    }
+
+    fun startDownload(context: Context, release: Release) {
+        if (job?.isActive == true) return
+        job = scope.launch { download(context.applicationContext, release) }
+    }
 
     /** Whether the check that runs when the app opens has run in this process. */
     @Volatile var checkedThisLaunch = false
 
+    /** Closes the dialog; a check or download still running is cancelled with it. */
     fun dismiss() {
-        if (_state.value !is UpdateState.Downloading) _state.value = UpdateState.Idle
+        job?.cancel()
+        job = null
+        _state.value = UpdateState.Idle
     }
 
     /** While connected, GitHub is reached through the tunnel; otherwise directly. */
@@ -89,6 +100,8 @@ object Updater {
                 quiet -> UpdateState.Idle
                 else -> UpdateState.UpToDate
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             _state.value = if (quiet) UpdateState.Idle else UpdateState.Failed(e.message ?: e.javaClass.simpleName)
         }
@@ -137,6 +150,9 @@ object Updater {
             if (total > 0 && done != total) throw IllegalStateException("download incomplete")
             if (!part.renameTo(target)) throw IllegalStateException("cannot save the file")
             _state.value = UpdateState.Ready(release, target)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            part.delete()
+            throw e
         } catch (e: Exception) {
             part.delete()
             _state.value = UpdateState.Failed(e.message ?: e.javaClass.simpleName)

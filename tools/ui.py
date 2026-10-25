@@ -28,7 +28,8 @@ def shell(cmd, check=True):
 
 def dump():
     for _ in range(5):
-        out = shell("uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; cat /sdcard/ui.xml", check=False)
+        # A failed dump leaves the previous file behind; remove it so a stale screen is never read.
+        out = shell("rm -f /sdcard/ui.xml; uiautomator dump /sdcard/ui.xml 2>&1 | grep -q 'dumped to' && cat /sdcard/ui.xml", check=False)
         if "<hierarchy" in out:
             return ET.fromstring(out[out.index("<?xml") if "<?xml" in out else out.index("<hierarchy"):])
         time.sleep(1)

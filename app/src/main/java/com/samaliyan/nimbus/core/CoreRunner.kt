@@ -27,13 +27,19 @@ class CoreRunner(private val workDir: File, private val binaries: Collection<Str
         process = p
         runCatching { p.outputStream.close() }
 
-        thread(name = "core-output", isDaemon = true) {
+        val reader = thread(name = "core-output", isDaemon = true) {
             try {
                 p.inputStream.bufferedReader().useLines { lines -> lines.forEach(onLine) }
             } catch (_: Exception) {
                 // The stream closes when the process ends.
             }
+        }
+        // The end of the process, not the end of its output, is what counts: a helper it started
+        // could keep the output open after the core itself is gone.
+        thread(name = "core-wait", isDaemon = true) {
             val code = runCatching { p.waitFor() }.getOrDefault(-1)
+            // Give the reader a moment to deliver the last lines, which hold the error if any.
+            runCatching { reader.join(1500) }
             onExit(code, stopping)
         }
     }
@@ -43,7 +49,10 @@ class CoreRunner(private val workDir: File, private val binaries: Collection<Str
         val p = process ?: return
         stopping = true
         p.destroy()
-        if (!runCatching { p.waitFor(4, TimeUnit.SECONDS) }.getOrDefault(false)) p.destroyForcibly()
+        if (!runCatching { p.waitFor(4, TimeUnit.SECONDS) }.getOrDefault(false)) {
+            p.destroyForcibly()
+            runCatching { p.waitFor(2, TimeUnit.SECONDS) }
+        }
         process = null
         // A core forced to end leaves psiphon or lyrebird it started behind.
         killStray()

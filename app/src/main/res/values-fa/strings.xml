@@ -188,6 +188,8 @@
     <string name="err_port_busy">پورت %1$d دست برنامه‌ی دیگری است. آن را در تنظیمات عوض کنید.</string>
     <string name="err_core_start">هسته اجرا نشد: %1$s</string>
     <string name="err_core_exit">هسته متوقف شد (کد %1$d).</string>
+    <string name="err_no_apps">دست‌کم یک برنامه برای VPN انتخاب کنید، یا «برنامه‌هایی که از VPN رد می‌شوند» را روی «همه‌ی برنامه‌ها» بگذارید.</string>
+    <string name="err_port_clash">پراکسی SOCKS5 و HTTP نمی‌توانند یک پورت داشته باشند. یکی را در تنظیمات عوض کنید.</string>
     <string name="err_tun">VPN راه‌اندازی نشد: %1$s</string>
     <string name="err_hint_args">یکی از گزینه‌ها درست نیست. «گزینه‌های اضافه‌ی هسته» را بررسی کنید.</string>
     <string name="err_hint_refused">کلادفلر این شبکه را نپذیرفت. کمی بعد دوباره امتحان کنید، شبکه را عوض کنید، یا حساب WARP را دوباره بسازید.</string>

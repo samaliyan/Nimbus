@@ -37,23 +37,26 @@ import com.samaliyan.nimbus.ui.MainActivity
 import hev.htproxy.TProxyService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.util.concurrent.Executors
 
 /**
  * Owns a connection from start to end: runs the core, and in VPN mode turns the phone's
  * traffic into SOCKS5 for it through hev-socks5-tunnel.
+ *
+ * Every change of the connection (start, stop, restart, an event from the core) runs on one
+ * dedicated thread, one at a time and to its end, so no two of them can interleave.
  */
 class NimbusService : VpnService() {
 
@@ -68,36 +71,40 @@ class NimbusService : VpnService() {
         private const val MAPPED_DNS = "198.18.0.2"
         private const val MTU = 8500
 
+        /** True from the service's creation to its destruction. */
+        @Volatile private var alive = false
+
         fun start(context: Context) = send(context, ACTION_START)
         fun stop(context: Context) = send(context, ACTION_STOP)
         fun restart(context: Context) = send(context, ACTION_RESTART)
 
         private fun send(context: Context, action: String) {
-            val intent = Intent(context, NimbusService::class.java).setAction(action)
-            if (action == ACTION_STOP && !Tunnel.state.value.isActive) {
+            if (action == ACTION_STOP && !alive) {
                 // Nothing runs; starting a foreground service only to stop it is pointless.
-                Tunnel.setState(TunnelState.Idle)
+                if (Tunnel.state.value !is TunnelState.Failed) Tunnel.setState(TunnelState.Idle)
                 return
             }
-            ContextCompat.startForegroundService(context, intent)
+            ContextCompat.startForegroundService(context, Intent(context, NimbusService::class.java).setAction(action))
         }
     }
 
+    private val executor = Executors.newSingleThreadExecutor { r -> Thread(r, "nimbus-control") }
+    private val control = executor.asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val control = Dispatchers.Default.limitedParallelism(1)
     private val events = Channel<Pair<Int, CoreEvent>>(Channel.UNLIMITED)
 
+    // Written only on the control thread; read elsewhere only through `generation`.
     private var runner: CoreRunner? = null
     private var tun: ParcelFileDescriptor? = null
     private var tunnelStarted = false
     private var settings = Settings()
-    private var generation = 0
+    @Volatile private var generation = 0
     private var ready = false
     private var peer: String? = null
     private var lastError: String? = null
-    private var sessionJobs = mutableListOf<Job>()
+    private val sessionJobs = mutableListOf<Job>()
+    private var probeJob: Job? = null
+    @Volatile private var lastStartId = 0
 
     // Proxy mode takes its traffic from the core's own counters.
     private var lastStatsAt = 0L
@@ -108,8 +115,12 @@ class NimbusService : VpnService() {
         super.attachBaseContext(Locales.wrap(base))
     }
 
+    /** Text in the language chosen now, which may have changed since the service started. */
+    private fun text(): Context = Locales.wrap(this)
+
     override fun onCreate() {
         super.onCreate()
+        alive = true
         SettingsStore.init(this)
         scope.launch(control) {
             for ((gen, event) in events) if (gen == generation) apply(event)
@@ -117,10 +128,11 @@ class NimbusService : VpnService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lastStartId = startId
         // Started as a foreground service: it has to say so right away, whatever it then does.
         goForeground(notification(Tunnel.state.value))
         when (intent?.action) {
-            ACTION_STOP -> scope.launch(control) { shutdown(TunnelState.Idle) }
+            ACTION_STOP -> scope.launch(control) { shutdown(TunnelState.Idle, startId) }
             ACTION_RESTART -> scope.launch(control) {
                 teardown()
                 begin()
@@ -133,21 +145,28 @@ class NimbusService : VpnService() {
 
     override fun onRevoke() {
         // Another VPN took over, or the user turned this one off in system settings.
-        scope.launch(control) { shutdown(TunnelState.Idle) }
+        val id = lastStartId
+        scope.launch(control) { shutdown(TunnelState.Idle, id) }
     }
 
     override fun onDestroy() {
+        alive = false
         scope.cancel()
-        stopNative()
-        runner?.stop()
-        runner = null
-        if (Tunnel.state.value.isActive || Tunnel.state.value == TunnelState.Stopping) {
-            Tunnel.setState(TunnelState.Idle)
+        // Cleanup waits for a command still running, on the control thread, not the main one.
+        executor.execute {
+            generation++
+            stopNative()
+            runner?.stop()
+            runner = null
+            if (Tunnel.state.value.isActive || Tunnel.state.value == TunnelState.Stopping) {
+                Tunnel.setState(TunnelState.Idle)
+            }
         }
+        executor.shutdown()
         super.onDestroy()
     }
 
-    // ---- lifecycle -------------------------------------------------------------------------
+    // ---- lifecycle (control thread only) -----------------------------------------------------
 
     private fun binaries(): Triple<File, File?, File?> {
         val dir = File(applicationInfo.nativeLibraryDir)
@@ -155,10 +174,15 @@ class NimbusService : VpnService() {
         return Triple(File(dir, "libaether.so"), opt("libpsiphon.so"), opt("liblyrebird.so"))
     }
 
-    private suspend fun begin() {
+    private fun installedChosenApps(s: Settings): List<String> = s.selectedApps.filter { pkg ->
+        pkg != packageName && runCatching { packageManager.getPackageInfo(pkg, 0) }.isSuccess
+    }
+
+    private fun begin() {
         generation++
         val gen = generation
         settings = SettingsStore.current
+        val t = text()
         Tunnel.startedWith = settings
         Tunnel.resetSession()
         ready = false
@@ -166,30 +190,35 @@ class NimbusService : VpnService() {
         lastError = null
         lastStatsAt = 0L
         Tunnel.setState(TunnelState.Starting(ConnectStage.PREPARING))
-        refreshNotification()
+        // A shutdown that ran just before may have taken the service out of the foreground.
+        goForeground(notification(Tunnel.state.value))
 
         if (settings.connMode == ConnMode.VPN) {
-            if (prepare(this) != null) return fail(getString(R.string.err_vpn_permission))
-            if (!TProxyService.load()) return fail(getString(R.string.err_missing_native))
+            if (prepare(this) != null) return fail(t.getString(R.string.err_vpn_permission))
+            if (!TProxyService.load()) return fail(t.getString(R.string.err_missing_native))
+            if (settings.appFilter == AppFilter.ONLY_SELECTED && installedChosenApps(settings).isEmpty()) {
+                return fail(t.getString(R.string.err_no_apps))
+            }
+        }
+        if (settings.httpProxy && settings.httpPort == settings.socksPort) {
+            return fail(t.getString(R.string.err_port_clash))
         }
 
         val (core, psiphon, lyrebird) = binaries()
-        if (!core.exists()) return fail(getString(R.string.err_missing_native))
-        if (settings.protocol == Protocol.PSIPHON && psiphon == null) return fail(getString(R.string.err_missing_native))
+        if (!core.exists()) return fail(t.getString(R.string.err_missing_native))
+        if (settings.protocol == Protocol.PSIPHON && psiphon == null) return fail(t.getString(R.string.err_missing_native))
         if (settings.protocol == Protocol.TOR && lyrebird == null) {
             Tunnel.note("lyrebird is missing; tor can only connect without bridges", Level.WARN)
         }
 
         val workDir = File(filesDir, "core")
         val tmp = File(cacheDir, "core-tmp").apply { mkdirs() }
-        val all = listOfNotNull(core, psiphon, lyrebird).map { it.absolutePath }
-        val r = CoreRunner(workDir, all)
-        runner = r
-        withContext(Dispatchers.IO) { r.killStray() }
+        val r = CoreRunner(workDir, listOfNotNull(core, psiphon, lyrebird).map { it.absolutePath })
+        r.killStray()
 
         val busy = listOfNotNull(settings.socksPort, settings.httpPort.takeIf { settings.httpProxy })
             .firstOrNull { !portFree(it) }
-        if (busy != null) return fail(getString(R.string.err_port_busy, busy))
+        if (busy != null) return fail(t.getString(R.string.err_port_busy, busy))
 
         val launch = CoreArgs.build(
             settings,
@@ -197,17 +226,16 @@ class NimbusService : VpnService() {
         )
         Tunnel.note("starting: " + masked(launch.args.drop(1)).joinToString(" "))
         try {
-            withContext(Dispatchers.IO) {
-                r.start(
-                    launch,
-                    onLine = { raw -> onCoreLine(gen, raw) },
-                    onExit = { code, requested ->
-                        scope.launch(control) { if (gen == generation && !requested) onCoreExit(code) }
-                    },
-                )
-            }
+            r.start(
+                launch,
+                onLine = { raw -> onCoreLine(gen, raw) },
+                onExit = { code, requested ->
+                    scope.launch(control) { if (gen == generation && !requested) onCoreExit(code) }
+                },
+            )
+            runner = r
         } catch (e: Exception) {
-            return fail(getString(R.string.err_core_start, e.message ?: e.javaClass.simpleName))
+            return fail(t.getString(R.string.err_core_start, e.message ?: e.javaClass.simpleName))
         }
     }
 
@@ -221,7 +249,7 @@ class NimbusService : VpnService() {
         for (e in LogParser.events(line)) events.trySend(gen to e)
     }
 
-    private suspend fun apply(event: CoreEvent) {
+    private fun apply(event: CoreEvent) {
         val state = Tunnel.state.value
         when (event) {
             is CoreEvent.Stage -> if (state is TunnelState.Starting && state.stage != event.stage) {
@@ -251,7 +279,7 @@ class NimbusService : VpnService() {
                 refreshNotification()
                 probeSoon()
             }
-            is CoreEvent.Stats -> if (settings.connMode == ConnMode.PROXY) {
+            is CoreEvent.Stats -> if (settings.connMode == ConnMode.PROXY && ready) {
                 val now = System.currentTimeMillis()
                 val dt = (now - lastStatsAt).coerceAtLeast(1)
                 val t = if (lastStatsAt == 0L) Traffic(event.up, event.down)
@@ -267,7 +295,7 @@ class NimbusService : VpnService() {
         }
     }
 
-    private suspend fun onReady() {
+    private fun onReady() {
         if (ready) return
         ready = true
         if (settings.connMode == ConnMode.VPN) {
@@ -280,35 +308,45 @@ class NimbusService : VpnService() {
         startSessionJobs()
     }
 
-    private suspend fun onCoreExit(code: Int) {
-        val message = lastError?.let { Errors.friendly(this, it) } ?: getString(R.string.err_core_exit, code)
+    private fun onCoreExit(code: Int) {
+        val t = text()
+        val message = lastError?.let { Errors.friendly(t, it) } ?: t.getString(R.string.err_core_exit, code)
         Tunnel.note("core ended with code $code", Level.ERROR)
         fail(message)
     }
 
-    private suspend fun fail(message: String) {
+    private fun fail(message: String) {
         Tunnel.note(message, Level.ERROR)
-        shutdown(TunnelState.Failed(message))
+        shutdown(TunnelState.Failed(message), lastStartId)
     }
 
     /** Stops everything this connection started, leaving the service itself running. */
-    private suspend fun teardown() {
+    private fun teardown() {
         generation++
         sessionJobs.forEach { it.cancel() }
         sessionJobs.clear()
+        probeJob?.cancel()
+        probeJob = null
         if (Tunnel.state.value.isActive) Tunnel.setState(TunnelState.Stopping)
         stopNative()
-        withContext(Dispatchers.IO) { runner?.stop() }
+        val r = runner
         runner = null
+        r?.stop()
         ready = false
     }
 
-    private suspend fun shutdown(final: TunnelState) {
+    /**
+     * Ends the connection and stops the service, unless a start arrived after [startId]: that
+     * start is queued behind this command and must still run.
+     */
+    private fun shutdown(final: TunnelState, startId: Int) {
         teardown()
         Tunnel.setState(final)
         Tunnel.startedWith = null
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        if (startId == lastStartId) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelfResult(startId)
+        }
     }
 
     private fun stopNative() {
@@ -324,6 +362,7 @@ class NimbusService : VpnService() {
 
     private fun startTun(): String? {
         val s = settings
+        val t = text()
         val b = Builder()
             .setSession(getString(R.string.app_name))
             .setMtu(MTU)
@@ -344,26 +383,24 @@ class NimbusService : VpnService() {
             }
         }
 
-        // The core and this app must stay outside the VPN, or the tunnel would carry itself.
-        val installed = s.selectedApps.filter { pkg ->
-            pkg != packageName && runCatching { packageManager.getPackageInfo(pkg, 0) }.isSuccess
-        }
+        // This app, and with it the core it runs, stays outside the VPN, or the tunnel would carry itself.
+        val chosen = installedChosenApps(s)
         try {
-            if (s.appFilter == AppFilter.ONLY_SELECTED && installed.isNotEmpty()) {
-                installed.forEach { b.addAllowedApplication(it) }
+            if (s.appFilter == AppFilter.ONLY_SELECTED) {
+                chosen.forEach { b.addAllowedApplication(it) }
             } else {
                 b.addDisallowedApplication(packageName)
-                if (s.appFilter == AppFilter.EXCEPT_SELECTED) installed.forEach { b.addDisallowedApplication(it) }
+                if (s.appFilter == AppFilter.EXCEPT_SELECTED) chosen.forEach { b.addDisallowedApplication(it) }
             }
         } catch (e: Exception) {
-            return getString(R.string.err_tun, e.message ?: "")
+            return t.getString(R.string.err_tun, e.message ?: "")
         }
 
         val fd = try {
             b.establish()
         } catch (e: Exception) {
-            return getString(R.string.err_tun, e.message ?: "")
-        } ?: return getString(R.string.err_vpn_permission)
+            return t.getString(R.string.err_tun, e.message ?: "")
+        } ?: return t.getString(R.string.err_vpn_permission)
         tun = fd
 
         val config = File(filesDir, "tunnel.yml")
@@ -389,7 +426,7 @@ class NimbusService : VpnService() {
             """.trimIndent() + "\n"
         )
         if (!TProxyService.TProxyStartService(config.absolutePath, fd.fd)) {
-            return getString(R.string.err_tun, "tun2socks")
+            return t.getString(R.string.err_tun, "tun2socks")
         }
         tunnelStarted = true
         return null
@@ -398,6 +435,7 @@ class NimbusService : VpnService() {
     // ---- while connected --------------------------------------------------------------------
 
     private fun startSessionJobs() {
+        val gen = generation
         if (settings.connMode == ConnMode.VPN) {
             sessionJobs += scope.launch {
                 var prevUp = 0L
@@ -405,11 +443,13 @@ class NimbusService : VpnService() {
                 var prevAt = System.currentTimeMillis()
                 while (isActive) {
                     delay(1000)
+                    if (gen != generation) break
                     val st = runCatching { TProxyService.TProxyGetStats() }.getOrNull() ?: continue
                     val now = System.currentTimeMillis()
                     val dt = (now - prevAt).coerceAtLeast(1)
                     val up = st[1]
                     val down = st[3]
+                    if (gen != generation) break
                     Tunnel.setTraffic(
                         Traffic(up, down, (up - prevUp).coerceAtLeast(0) * 1000 / dt, (down - prevDown).coerceAtLeast(0) * 1000 / dt)
                     )
@@ -420,26 +460,29 @@ class NimbusService : VpnService() {
         sessionJobs += scope.launch {
             while (isActive) {
                 delay(2000)
-                refreshNotification()
+                // On the control thread, so it cannot race a stop that removes the notification.
+                launch(control) { if (gen == generation) refreshNotification() }
             }
         }
         probeSoon()
     }
 
-    private var probeJob: Job? = null
-
     /** Checks the exit address now, and again every few minutes while connected. */
     private fun probeSoon() {
         probeJob?.cancel()
         val port = settings.socksPort
+        val gen = generation
         probeJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 val exit = Probe.exit(port)
+                val ms = if (exit != null) Probe.latency(port) else null
+                // A probe that outlived its connection must not write into the next one.
+                if (gen != generation) break
                 if (exit != null) Tunnel.setExit(exit)
-                Tunnel.setLatency(if (exit != null) Probe.latency(port) else null)
+                Tunnel.setLatency(ms)
                 delay(if (exit != null) 5 * 60_000L else 20_000L)
             }
-        }.also { sessionJobs += it }
+        }
     }
 
     // ---- helpers ----------------------------------------------------------------------------
@@ -447,7 +490,13 @@ class NimbusService : VpnService() {
     /** Keeps secrets passed through the extra arguments out of the log, which users share. */
     private fun masked(args: List<String>): List<String> {
         val secret = setOf("--access-secret", "--access-token", "--access-id", "--upstream")
-        return args.mapIndexed { i, a -> if (i > 0 && args[i - 1] in secret) "***" else a }
+        return args.mapIndexed { i, a ->
+            when {
+                i > 0 && args[i - 1] in secret -> "***"
+                secret.any { a.startsWith("$it=") } -> a.substringBefore('=') + "=***"
+                else -> a
+            }
+        }
     }
 
     private fun portFree(port: Int): Boolean = runCatching {
@@ -474,16 +523,17 @@ class NimbusService : VpnService() {
     }
 
     private fun notification(state: TunnelState): Notification {
+        val t = text()
         val title = when (state) {
-            is TunnelState.Connected -> getString(R.string.state_connected)
-            is TunnelState.Reconnecting -> getString(R.string.state_reconnecting)
-            is TunnelState.Starting -> getString(Format.stageText(state.stage))
-            else -> getString(R.string.state_connecting)
+            is TunnelState.Connected -> t.getString(R.string.state_connected)
+            is TunnelState.Reconnecting -> t.getString(R.string.state_reconnecting)
+            is TunnelState.Starting -> t.getString(Format.stageText(state.stage))
+            else -> t.getString(R.string.state_connecting)
         }
-        val text = if (state is TunnelState.Connected) {
-            val t = Tunnel.traffic.value
-            getString(R.string.notif_traffic, Format.rate(this, t.downRate), Format.rate(this, t.upRate))
-        } else getString(R.string.notif_wait)
+        val body = if (state is TunnelState.Connected) {
+            val tr = Tunnel.traffic.value
+            t.getString(R.string.notif_traffic, Format.rate(t, tr.downRate), Format.rate(t, tr.upRate))
+        } else t.getString(R.string.notif_wait)
         val stopIntent = PendingIntent.getService(
             this, 1, Intent(this, NimbusService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -491,12 +541,12 @@ class NimbusService : VpnService() {
         return NotificationCompat.Builder(this, NimbusApp.CHANNEL_CONNECTION)
             .setSmallIcon(R.drawable.ic_tile)
             .setContentTitle(title)
-            .setContentText(text)
+            .setContentText(body)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setContentIntent(openAppIntent())
-            .addAction(0, getString(R.string.action_disconnect), stopIntent)
+            .addAction(0, t.getString(R.string.action_disconnect), stopIntent)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }

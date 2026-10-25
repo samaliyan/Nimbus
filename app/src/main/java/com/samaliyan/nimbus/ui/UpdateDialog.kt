@@ -46,6 +46,7 @@ fun UpdateDialog() {
                 }
             },
             confirmButton = {},
+            dismissButton = { TextButton(onClick = { Updater.dismiss() }) { Text(stringResource(R.string.cancel)) } },
         )
         UpdateState.UpToDate -> AlertDialog(
             onDismissRequest = { Updater.dismiss() },
@@ -123,7 +124,9 @@ fun UpdateDialog() {
                     }
                 },
                 dismissButton = {
-                    if (!downloading) TextButton(onClick = { Updater.dismiss() }) { Text(stringResource(R.string.later)) }
+                    TextButton(onClick = { Updater.dismiss() }) {
+                        Text(stringResource(if (downloading) R.string.cancel else R.string.later))
+                    }
                 },
             )
         }

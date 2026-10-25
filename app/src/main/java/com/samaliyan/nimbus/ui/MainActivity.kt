@@ -49,6 +49,7 @@ import com.samaliyan.nimbus.R
 import com.samaliyan.nimbus.core.ConnMode
 import com.samaliyan.nimbus.core.SettingsStore
 import com.samaliyan.nimbus.core.Tunnel
+import com.samaliyan.nimbus.core.TunnelState
 import com.samaliyan.nimbus.core.isActive
 import com.samaliyan.nimbus.ui.theme.NimbusTheme
 import com.samaliyan.nimbus.update.Updater
@@ -62,15 +63,32 @@ enum class Tab { HOME, LOG, SETTINGS }
 class MainActivity : ComponentActivity() {
 
     companion object {
-        const val EXTRA_CONNECT = "connect"
+        private const val EXTRA_CONNECT = "connect"
+
+        /**
+         * An intent that opens the app and connects. It carries a secret kept in this app's
+         * own storage, so another app cannot make Nimbus connect by sending the same extra.
+         */
+        fun connectIntent(context: Context): Intent =
+            Intent(context, MainActivity::class.java).putExtra(EXTRA_CONNECT, connectToken(context))
+
+        private fun connectToken(context: Context): String {
+            val prefs = context.getSharedPreferences("ui", MODE_PRIVATE)
+            return prefs.getString("connectToken", null) ?: java.util.UUID.randomUUID().toString().also {
+                prefs.edit().putString("connectToken", it).apply()
+            }
+        }
     }
+
+    /** Set while the system's VPN consent is shown for a reconnect rather than a first connect. */
+    private var restartAfterConsent = false
 
     private val snackbar = SnackbarHostState()
     private var appliedLang = SettingsStore.current.lang
 
     private val vpnConsent = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            NimbusService.start(this)
+            if (restartAfterConsent) NimbusService.restart(this) else NimbusService.start(this)
         } else {
             lifecycleScope.launch { snackbar.showSnackbar(getString(R.string.err_vpn_permission)) }
         }
@@ -95,7 +113,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        if (savedInstanceState == null && intent?.getBooleanExtra(EXTRA_CONNECT, false) == true) connect()
+        if (savedInstanceState == null) handleConnectExtra(intent)
 
         if (SettingsStore.current.autoUpdateCheck && !Updater.checkedThisLaunch) {
             Updater.checkedThisLaunch = true
@@ -108,7 +126,7 @@ class MainActivity : ComponentActivity() {
                 AppRoot(
                     snackbar = snackbar,
                     onToggle = ::toggle,
-                    onReconnect = { NimbusService.restart(this) },
+                    onReconnect = ::reconnect,
                 )
             }
         }
@@ -116,14 +134,39 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.getBooleanExtra(EXTRA_CONNECT, false)) connect()
+        handleConnectExtra(intent)
+    }
+
+    private fun handleConnectExtra(intent: Intent?) {
+        val token = intent?.getStringExtra(EXTRA_CONNECT) ?: return
+        intent.removeExtra(EXTRA_CONNECT)
+        // Reopening from recent apps replays the launch intent; that is not a request to connect.
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
+        if (token == connectToken(this) && !Tunnel.state.value.isActive) connect()
     }
 
     private fun toggle() {
-        if (Tunnel.state.value.isActive) NimbusService.stop(this) else connect()
+        when (Tunnel.state.value) {
+            TunnelState.Stopping -> Unit // a tap while stopping would be lost; wait for it to finish
+            else -> if (Tunnel.state.value.isActive) NimbusService.stop(this) else connect()
+        }
+    }
+
+    /** Restarts the connection with the current settings, asking for VPN consent if VPN mode needs it. */
+    private fun reconnect() {
+        if (SettingsStore.current.connMode == ConnMode.VPN) {
+            val consent = VpnService.prepare(this)
+            if (consent != null) {
+                restartAfterConsent = true
+                vpnConsent.launch(consent)
+                return
+            }
+        }
+        NimbusService.restart(this)
     }
 
     private fun connect() {
+        restartAfterConsent = false
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {

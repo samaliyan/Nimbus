@@ -189,6 +189,8 @@
     <string name="err_port_busy">Port %1$d is in use by another app. Change it in Settings.</string>
     <string name="err_core_start">The core could not start: %1$s</string>
     <string name="err_core_exit">The core stopped (code %1$d).</string>
+    <string name="err_no_apps">Choose at least one app for the VPN, or set Apps that use the VPN to All apps.</string>
+    <string name="err_port_clash">The SOCKS5 and HTTP proxies cannot use the same port. Change one in Settings.</string>
     <string name="err_tun">The VPN could not start: %1$s</string>
     <string name="err_hint_args">An option is not valid. Check Extra core options.</string>
     <string name="err_hint_refused">Cloudflare refused this network. Try again later, switch network, or reset the WARP account.</string>

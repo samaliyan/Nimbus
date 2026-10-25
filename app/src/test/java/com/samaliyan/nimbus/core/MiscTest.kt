@@ -26,6 +26,9 @@ class MiscTest {
         assertNull(Validate.port("70000"))
         assertTrue(Validate.extraArgs("--a \"b c\""))
         assertFalse(Validate.extraArgs("--a \"b c"))
+        assertFalse(Validate.extraArgs("--bind 0.0.0.0:1819"))
+        assertFalse(Validate.extraArgs("--ech auto --http-proxy=0.0.0.0:8080"))
+        assertTrue(Validate.extraArgs("--ech auto --bind-something"))
         assertTrue(Validate.region("DE"))
         assertFalse(Validate.region("DEU"))
     }
