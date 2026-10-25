@@ -91,7 +91,7 @@ jobs:
           echo "UPDATE_REPO=${{ github.repository }}" >> "$GITHUB_ENV"
 
       - name: Fetch the Aether core
-        run: bash tools/fetch-core.sh "${{ needs.decide.outputs.tag }}" app/src/main/jniLibs build/licenses
+        run: tools/ci-run.sh bash tools/fetch-core.sh "${{ needs.decide.outputs.tag }}" app/src/main/jniLibs build/licenses
 
       - name: Install the NDK
         run: |
@@ -104,7 +104,7 @@ jobs:
           cd build/hev
           git checkout "$HEV_COMMIT"
           git submodule update --init --recursive
-          "$NDK/ndk-build" NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk \
+          ../../tools/ci-run.sh "$NDK/ndk-build" NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk \
             APP_ABI="arm64-v8a armeabi-v7a x86_64" APP_PLATFORM=android-29 -j"$(nproc)"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             install -m 0644 "libs/$abi/libhev-socks5-tunnel.so" "../../app/src/main/jniLibs/$abi/"
@@ -132,14 +132,14 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+        run: tools/ci-run.sh ./gradlew --no-daemon testReleaseUnitTest assembleRelease
 
       - name: Check every command line the app builds against the real core
         run: |
           tag="${{ needs.decide.outputs.tag }}"
           mkdir -p build/linux-core
           curl -fsSL "https://github.com/CluvexStudio/Aether/releases/download/$tag/aether-linux-x86_64.tar.gz" | tar -xz -C build/linux-core
-          python3 tools/check-args.py build/linux-core/aether app/build/core-args.jsonl
+          tools/ci-run.sh python3 tools/check-args.py build/linux-core/aether app/build/core-args.jsonl
 
       - name: Collect APKs
         run: |
@@ -181,7 +181,7 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: SHOTS=shots python3 tools/e2e.py dist/Nimbus-*-x86_64.apk
+          script: SHOTS=shots tools/ci-run.sh python3 tools/e2e.py dist/Nimbus-*-x86_64.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:

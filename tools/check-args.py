@@ -11,7 +11,8 @@ import subprocess
 import sys
 import tempfile
 
-REJECTED = ("unknown option", "is not an address", "is not a", "invalid", "expects a value", "missing value", "must be")
+# The two ways the core's option parser refuses a command line.
+REJECTED = ("unknown option", "requires a value")
 
 binary, path = sys.argv[1], sys.argv[2]
 bad = 0
