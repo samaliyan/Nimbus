@@ -14,7 +14,7 @@ import tempfile
 # The two ways the core's option parser refuses a command line.
 REJECTED = ("unknown option", "requires a value")
 
-binary, path = sys.argv[1], sys.argv[2]
+binary, path = os.path.abspath(sys.argv[1]), sys.argv[2]
 bad = 0
 with open(path) as f:
     lines = [json.loads(l) for l in f if l.strip()]
