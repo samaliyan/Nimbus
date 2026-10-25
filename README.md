@@ -22,6 +22,13 @@
 
 برنامه به اندروید ۱۰ یا جدیدتر نیاز دارد.
 
+<p>
+<img src="docs/home-idle.png" width="200">
+<img src="docs/home-connected.png" width="200">
+<img src="docs/settings.png" width="200">
+<img src="docs/home-dark-en.png" width="200">
+</p>
+
 </div>
 
 ## English
