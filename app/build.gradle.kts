@@ -31,9 +31,12 @@ android {
         if (keystorePath != null) {
             create("release") {
                 storeFile = file(keystorePath)
-                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
-                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+                // Pasted secrets often carry a stray space or newline.
+                val storePw = System.getenv("SIGNING_STORE_PASSWORD")?.trim()
+                storePassword = storePw
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")?.trim()
+                // The key is in a PKCS12 store, where the key password is the store password.
+                keyPassword = storePw
                 enableV1Signing = false
                 enableV2Signing = true
                 enableV3Signing = true
