@@ -14,6 +14,7 @@ import com.samaliyan.nimbus.core.TunnelState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,16 +46,42 @@ object Updater {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var job: kotlinx.coroutines.Job? = null
+    private val lock = Any()
+    private var epoch = 0
+
+    /**
+     * One request to check or download. Its results reach the screen only while it is the
+     * latest request: one cancelled or replaced meanwhile writes nothing.
+     */
+    private class Ticket(private val n: Int) {
+        var state: UpdateState
+            get() = _state.value
+            set(v) { synchronized(lock) { if (n == epoch) _state.value = v } }
+    }
+
+    private fun next(work: suspend (Ticket) -> Unit) {
+        synchronized(lock) {
+            epoch++
+            val ticket = Ticket(epoch)
+            val prev = job
+            // A cancelled request may still be finishing a read; the new one waits for it.
+            job = scope.launch {
+                prev?.cancelAndJoin()
+                work(ticket)
+            }
+        }
+    }
 
     fun startCheck(quiet: Boolean) {
-        if (job?.isCompleted == false) return
-        job = scope.launch { check(quiet) }
+        if (_state.value is UpdateState.Downloading) return
+        if (!quiet) synchronized(lock) { _state.value = UpdateState.Checking }
+        next { check(it, quiet) }
     }
 
     fun startDownload(context: Context, release: Release) {
-        // A cancelled download may still be finishing its last read; never run two at once.
-        if (job?.isCompleted == false) return
-        job = scope.launch { download(context.applicationContext, release) }
+        if (_state.value is UpdateState.Downloading) return
+        synchronized(lock) { _state.value = UpdateState.Downloading(release, 0, release.size) }
+        next { download(it, context.applicationContext, release) }
     }
 
     /** Whether the check that runs when the app opens has run in this process. */
@@ -62,9 +89,11 @@ object Updater {
 
     /** Closes the dialog; a check or download still running is cancelled with it. */
     fun dismiss() {
-        // The job is kept: until it has really ended, no new one starts beside it.
-        job?.cancel()
-        _state.value = UpdateState.Idle
+        synchronized(lock) {
+            epoch++
+            job?.cancel()
+            _state.value = UpdateState.Idle
+        }
     }
 
     /** While connected, GitHub is reached through the tunnel; otherwise directly. */
@@ -83,9 +112,7 @@ object Updater {
         return c
     }
 
-    suspend fun check(quiet: Boolean) = withContext(Dispatchers.IO) {
-        if (_state.value is UpdateState.Downloading) return@withContext
-        if (!quiet) _state.value = UpdateState.Checking
+    private suspend fun check(ticket: Ticket, quiet: Boolean) = withContext(Dispatchers.IO) {
         try {
             val abis = Build.SUPPORTED_ABIS.toList()
             val c = open("https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases/latest")
@@ -101,7 +128,7 @@ object Updater {
                 c.disconnect()
             }
             coroutineContext.ensureActive()
-            _state.value = when {
+            ticket.state = when {
                 release == null -> if (quiet) UpdateState.Idle else UpdateState.Failed("no apk in the latest release")
                 ReleaseParser.isNewer(release.version, BuildConfig.VERSION_NAME) -> UpdateState.Available(release)
                 quiet -> UpdateState.Idle
@@ -112,7 +139,7 @@ object Updater {
         } catch (e: Exception) {
             // A request cut short by Cancel ends in an IOException; it is not a failure to show.
             coroutineContext.ensureActive()
-            _state.value = if (quiet) UpdateState.Idle else UpdateState.Failed(e.message ?: e.javaClass.simpleName)
+            ticket.state = if (quiet) UpdateState.Idle else UpdateState.Failed(e.message ?: e.javaClass.simpleName)
         }
     }
 
@@ -126,13 +153,12 @@ object Updater {
         }
     }
 
-    suspend fun download(context: Context, release: Release) = withContext(Dispatchers.IO) {
-        if (_state.value is UpdateState.Downloading) return@withContext
+    private suspend fun download(ticket: Ticket, context: Context, release: Release) = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "updates").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }
         val target = File(dir, release.apkName)
         val part = File(dir, release.apkName + ".part")
-        _state.value = UpdateState.Downloading(release, 0, release.size)
+        ticket.state = UpdateState.Downloading(release, 0, release.size)
         try {
             var url = release.apkUrl
             var c = open(url)
@@ -160,7 +186,7 @@ object Updater {
                         done += n
                         if (done - lastShown > 256 * 1024) {
                             lastShown = done
-                            _state.value = UpdateState.Downloading(release, done, total)
+                            ticket.state = UpdateState.Downloading(release, done, total)
                         }
                     }
                 }
@@ -169,14 +195,14 @@ object Updater {
             if (total > 0 && done != total) throw IllegalStateException("download incomplete")
             if (!part.renameTo(target)) throw IllegalStateException("cannot save the file")
             coroutineContext.ensureActive()
-            _state.value = UpdateState.Ready(release, target)
+            ticket.state = UpdateState.Ready(release, target)
         } catch (e: kotlinx.coroutines.CancellationException) {
             part.delete()
             throw e
         } catch (e: Exception) {
             part.delete()
             coroutineContext.ensureActive()
-            _state.value = UpdateState.Failed(e.message ?: e.javaClass.simpleName)
+            ticket.state = UpdateState.Failed(e.message ?: e.javaClass.simpleName)
         }
     }
 

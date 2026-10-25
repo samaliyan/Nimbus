@@ -173,10 +173,12 @@ class NimbusService : VpnService() {
             // A newer service may already run a connection: then only this one's own core is
             // stopped, and the shared tunnel, stray-process sweep and state are left to it.
             val newest = me == instances
-            if (newest) stopNative()
+            // This instance's own tunnel is always closed; hev runs once per process, so it is
+            // stopped only when no newer instance may have started it again.
+            if (newest) stopNative() else { runCatching { tun?.close() }; tun = null }
             runner?.stop(sweep = newest)
             runner = null
-            if (newest && (Tunnel.state.value.isActive || Tunnel.state.value == TunnelState.Stopping)) {
+            if (me == instances && (Tunnel.state.value.isActive || Tunnel.state.value == TunnelState.Stopping)) {
                 Tunnel.setState(TunnelState.Idle)
             }
         }
@@ -376,8 +378,12 @@ class NimbusService : VpnService() {
      */
     private fun shutdown(final: TunnelState, startId: Int) {
         teardown()
-        Tunnel.setState(final)
-        Tunnel.startedWith = null
+        if (instance == instances) {
+            // A stop right after a failure keeps the failure's message on screen.
+            val keepFailure = final == TunnelState.Idle && Tunnel.state.value is TunnelState.Failed
+            if (!keepFailure) Tunnel.setState(final)
+            Tunnel.startedWith = null
+        }
         // stopSelfResult refuses when a newer start has arrived; that start is still to run.
         if (stopSelfResult(startId)) stopForeground(STOP_FOREGROUND_REMOVE)
     }
