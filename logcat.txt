@@ -1,0 +1,118 @@
+--------- beginning of main
+10-25 14:42:38.864 I/NimbusCore( 4445): [2026-10-25T14:42:38.862Z INFO  aether] Aether v2.4.0
+10-25 14:42:38.865 I/NimbusCore( 4445): [2026-10-25T14:42:38.864Z INFO  aether::sysprofile] [*] performance profile: Low (cpus=2 mem=2475MB); scan concurrency cap=4, udp socket buffer=256KB, netstack tcp buffers=256KB rx/128KB tx, netstack udp buffer=32KB, channel capacity=128, h2 windows=2048KB/4096KB
+10-25 14:42:38.925 I/NimbusCore( 4445): [2026-10-25T14:42:38.925Z INFO  aether] [+] no masque identity found; provisioning dedicated masque account
+10-25 14:42:38.961 I/NimbusCore( 4445): [2026-10-25T14:42:38.960Z INFO  aether::account] [*] the calls to the warp api send their ClientHello in pieces of 8-16 bytes, 2-10ms apart
+10-25 14:42:40.360 I/NimbusCore( 4445): [2026-10-25T14:42:40.360Z INFO  aether::account] [+] enrolling MASQUE key for device 4d747ff9-ef28-48dc-9f91-1cc09feec9a6
+10-25 14:42:41.425 I/NimbusCore( 4445): [2026-10-25T14:42:41.425Z INFO  aether::account] [+] MASQUE key enrolled
+10-25 14:42:42.271 I/NimbusCore( 4445): [2026-10-25T14:42:42.271Z INFO  aether] [+] warp enabled for device 4d747ff9-ef28-48dc-9f91-1cc09feec9a6
+10-25 14:42:42.272 I/NimbusCore( 4445): [2026-10-25T14:42:42.272Z INFO  aether] [+] provisioned and saved new masque identity to aether-masque.toml
+10-25 14:42:42.272 I/NimbusCore( 4445): [2026-10-25T14:42:42.272Z INFO  aether] [+] identity ready: device=4d747ff9-ef28-48dc-9f91-1cc09feec9a6 ipv4=172.16.0.2 ipv6=2606:4700:110:89ef:4b8:d94f:a0a:d6eb
+10-25 14:42:42.272 I/NimbusCore( 4445): [2026-10-25T14:42:42.272Z INFO  aether] [+] ECH off; the server name goes out in cleartext
+10-25 14:42:42.272 I/NimbusCore( 4445): [2026-10-25T14:42:42.272Z INFO  aether] [*] hunting for a working MASQUE gateway (deep connect-ip + data-plane verification)
+10-25 14:42:42.274 I/NimbusCore( 4445): [2026-10-25T14:42:42.274Z INFO  aether] [+] obfuscation profile: firewall
+10-25 14:42:42.277 I/NimbusCore( 4445): [2026-10-25T14:42:42.277Z INFO  aether::prober] [*] scan mode=balanced ip=ipv4 candidates=2079 ports=[443, 500, 1701, 4500, 4443, 8443, 8095] concurrency=4 per_probe=6s budget=120s
+10-25 14:42:42.282 I/NimbusCore( 4445): [2026-10-25T14:42:42.282Z INFO  aether::tls] tls verification: disabled (--tls-verify enables pinning; on by default with --team)
+10-25 14:42:48.244 I/NimbusCore( 4445): [2026-10-25T14:42:48.244Z INFO  aether::prober] [+] candidate ok 162.159.199.1:443 rtt=672.712067ms
+10-25 14:44:42.278 I/NimbusCore( 4445): [2026-10-25T14:44:42.278Z WARN  aether::prober] [-] scan deadline reached
+10-25 14:44:42.278 I/NimbusCore( 4445): [2026-10-25T14:44:42.278Z INFO  aether::prober] [+] best gateway 162.159.199.1:443 rtt=672.712067ms
+10-25 14:44:42.278 I/NimbusCore( 4445): [2026-10-25T14:44:42.278Z INFO  aether] [+] selected MASQUE gateway 162.159.199.1:443 (rtt 672.712067ms)
+10-25 14:44:42.278 I/NimbusCore( 4445): [2026-10-25T14:44:42.278Z INFO  aether] [+] using cloudflare edge 162.159.199.1:443
+10-25 14:44:42.279 I/NimbusCore( 4445): [2026-10-25T14:44:42.278Z INFO  aether] [+] obfuscation profile: firewall
+10-25 14:44:42.279 I/NimbusCore( 4445): [2026-10-25T14:44:42.279Z INFO  aether] [+] [masque] MASQUE transport: HTTP/3 (QUIC) to 162.159.199.1:443 (inner mtu 1280, datagram 1350)
+10-25 14:44:42.337 I/NimbusCore( 4445): [2026-10-25T14:44:42.337Z INFO  aether::quic] quic handshake established; alpn=h3
+10-25 14:44:42.337 I/NimbusCore( 4445): [2026-10-25T14:44:42.337Z INFO  aether::quic] connect-ip request sent on stream 0
+10-25 14:44:42.337 I/NimbusCore( 4445): [2026-10-25T14:44:42.337Z INFO  aether::quic] [*] validating masque data-plane before exposing socks5
+10-25 14:44:42.584 I/NimbusCore( 4445): [2026-10-25T14:44:42.584Z INFO  aether::quic] connect-ip status: 200
+10-25 14:44:43.731 I/NimbusCore( 4445): [2026-10-25T14:44:43.731Z INFO  aether::quic] [+] masque tunnel validated (end-to-end data confirmed); exposing socks5
+10-25 14:44:43.732 I/NimbusCore( 4445): [2026-10-25T14:44:43.731Z INFO  aether::socks] [+] socks5 server listening on 127.0.0.1:1819
+10-25 14:44:43.773 I/NimbusCore( 4445): [2026-10-25T14:44:43.773Z INFO  aether::exitloc] [+] masque exit: 104.28.205.117, US via LAX, 40ms to cloudflare, warp on
+10-25 14:46:00.662 I/NimbusCore( 4445): [2026-10-25T14:46:00.661Z INFO  aether] Aether v2.4.0
+10-25 14:46:00.662 I/NimbusCore( 4445): [2026-10-25T14:46:00.662Z INFO  aether::sysprofile] [*] performance profile: Low (cpus=2 mem=2475MB); scan concurrency cap=4, udp socket buffer=256KB, netstack tcp buffers=256KB rx/128KB tx, netstack udp buffer=32KB, channel capacity=128, h2 windows=2048KB/4096KB
+10-25 14:46:00.665 I/NimbusCore( 4445): [2026-10-25T14:46:00.665Z INFO  aether] [+] no warp identity found; provisioning dedicated wireguard account
+10-25 14:46:00.667 I/NimbusCore( 4445): [2026-10-25T14:46:00.667Z INFO  aether::account] [*] the calls to the warp api send their ClientHello in pieces of 8-16 bytes, 2-10ms apart
+10-25 14:46:03.568 I/NimbusCore( 4445): [2026-10-25T14:46:03.568Z INFO  aether] [+] warp enabled for device 3508e95c-b2cd-41e0-8bdd-66e0b93eabc9
+10-25 14:46:03.569 I/NimbusCore( 4445): [2026-10-25T14:46:03.569Z INFO  aether] [+] provisioned and saved new warp identity to aether.toml
+10-25 14:46:03.569 I/NimbusCore( 4445): [2026-10-25T14:46:03.569Z INFO  aether] [+] identity ready: device=3508e95c-b2cd-41e0-8bdd-66e0b93eabc9 ipv4=172.16.0.2 ipv6=2606:4700:110:86a9:770e:bc63:2e55:b18b
+10-25 14:46:03.569 I/NimbusCore( 4445): [2026-10-25T14:46:03.569Z INFO  aether] [+] aethernoize primary profile: balanced
+10-25 14:46:03.570 I/NimbusCore( 4445): [2026-10-25T14:46:03.569Z INFO  aether] [*] hunting for a working WireGuard endpoint (handshake + data-plane verification, aethernoize='balanced')
+10-25 14:46:03.570 I/NimbusCore( 4445): [2026-10-25T14:46:03.570Z INFO  aether::wg_prober] [*] wireguard scan mode=balanced ip=ipv4 candidates=2532 ports=[2408, 500, 1701, 4500, 854, 859, 864, 878, 880, 890, 891, 894, 903, 908, 928, 934, 939, 942, 943, 945, 946, 955, 968, 987, 988, 1002, 1010, 1014, 1018, 1070, 1074, 1180, 1387, 1843, 2371, 2506, 3138, 3476, 3581, 3854, 4177, 4198, 4233, 5279, 5956, 7103, 7152, 7156, 7281, 7559, 8319, 8742, 8854, 8886] concurrency=4 per_probe=7s budget=80s
+10-25 14:46:04.104 I/NimbusCore( 4445): [2026-10-25T14:46:04.104Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.97.1:4500 rtt=532.263222ms
+10-25 14:46:04.124 I/NimbusCore( 4445): [2026-10-25T14:46:04.124Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.96.1:1701 rtt=552.855793ms
+10-25 14:46:04.139 I/NimbusCore( 4445): [2026-10-25T14:46:04.139Z INFO  aether::wg_prober] [+] wg candidate ok 162.159.192.1:2408 rtt=569.254828ms
+10-25 14:46:04.204 I/NimbusCore( 4445): [2026-10-25T14:46:04.204Z INFO  aether::wg_prober] [+] wg candidate ok 162.159.192.82:859 rtt=79.599304ms
+10-25 14:46:04.214 I/NimbusCore( 4445): [2026-10-25T14:46:04.214Z INFO  aether::wg_prober] [+] wg candidate ok 162.159.195.197:864 rtt=75.008248ms
+10-25 14:46:04.214 I/NimbusCore( 4445): [2026-10-25T14:46:04.214Z INFO  aether::wg_prober] [+] reached target of 5 endpoints, selecting best
+10-25 14:46:04.276 I/NimbusCore( 4445): [2026-10-25T14:46:04.276Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.96.76:878 rtt=71.786224ms
+10-25 14:46:04.360 I/NimbusCore( 4445): [2026-10-25T14:46:04.360Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.97.152:880 rtt=146.00001ms
+10-25 14:46:04.439 I/NimbusCore( 4445): [2026-10-25T14:46:04.439Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.99.126:891 rtt=78.183819ms
+10-25 14:46:05.103 I/NimbusCore( 4445): [2026-10-25T14:46:05.103Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.98.135:890 rtt=826.953661ms
+10-25 14:46:10.704 I/NimbusCore( 4445): [2026-10-25T14:46:10.704Z INFO  aether::wg_prober] [+] wg candidate ok 162.159.195.70:908 rtt=130.777245ms
+10-25 14:46:10.781 I/NimbusCore( 4445): [2026-10-25T14:46:10.781Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.96.210:928 rtt=76.451325ms
+10-25 14:46:10.856 I/NimbusCore( 4445): [2026-10-25T14:46:10.856Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.97.244:934 rtt=75.043767ms
+10-25 14:46:10.957 I/NimbusCore( 4445): [2026-10-25T14:46:10.957Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.98.213:939 rtt=101.114838ms
+10-25 14:46:11.035 I/NimbusCore( 4445): [2026-10-25T14:46:11.035Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.99.18:942 rtt=77.599984ms
+10-25 14:46:11.235 I/NimbusCore( 4445): [2026-10-25T14:46:11.235Z INFO  aether::wg_prober] [+] wg candidate ok 162.159.192.235:945 rtt=129.020054ms
+10-25 14:46:11.310 I/NimbusCore( 4445): [2026-10-25T14:46:11.310Z INFO  aether::wg_prober] [+] wg candidate ok 162.159.195.221:946 rtt=74.518924ms
+10-25 14:46:11.517 I/NimbusCore( 4445): [2026-10-25T14:46:11.517Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.97.214:968 rtt=77.805931ms
+10-25 14:46:11.594 I/NimbusCore( 4445): [2026-10-25T14:46:11.594Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.98.182:987 rtt=76.145048ms
+10-25 14:46:11.673 I/NimbusCore( 4445): [2026-10-25T14:46:11.673Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.99.139:988 rtt=79.735328ms
+10-25 14:46:12.184 I/NimbusCore( 4445): [2026-10-25T14:46:12.184Z INFO  aether::wg_prober] [+] wg candidate ok 162.159.192.154:1010 rtt=79.007127ms
+10-25 14:46:12.673 I/NimbusCore( 4445): [2026-10-25T14:46:12.673Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.96.57:955 rtt=1.362462301s
+10-25 14:46:12.748 I/NimbusCore( 4445): [2026-10-25T14:46:12.748Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.96.235:1018 rtt=75.48546ms
+10-25 14:46:12.824 I/NimbusCore( 4445): [2026-10-25T14:46:12.824Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.97.149:1070 rtt=75.784095ms
+10-25 14:46:13.600 I/NimbusCore( 4445): [2026-10-25T14:46:13.599Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.98.5:1074 rtt=775.256382ms
+10-25 14:46:13.699 I/NimbusCore( 4445): [2026-10-25T14:46:13.699Z INFO  aether::wg_prober] [+] wg candidate ok 188.114.99.164:1180 rtt=99.502687ms
+10-25 14:46:16.215 I/NimbusCore( 4445): [2026-10-25T14:46:16.215Z INFO  aether::wg_prober] [+] no new endpoints recently, finalizing selection
+10-25 14:46:16.215 I/NimbusCore( 4445): [2026-10-25T14:46:16.215Z INFO  aether::wg_prober] [+] wg endpoint 188.114.96.76:878 rtt=71.786224ms
+10-25 14:46:16.215 I/NimbusCore( 4445): [2026-10-25T14:46:16.215Z INFO  aether] [+] selected WireGuard endpoint 188.114.96.76:878 using aethernoize profile 'balanced'
+10-25 14:46:16.215 I/NimbusCore( 4445): [2026-10-25T14:46:16.215Z INFO  aether] [+] using cloudflare edge 188.114.96.76:878
+10-25 14:46:16.215 I/NimbusCore( 4445): [2026-10-25T14:46:16.215Z INFO  aether] [*] validating WireGuard tunnel with 188.114.96.76:878 (handshake + data-plane) before serving socks5...
+10-25 14:46:16.304 I/NimbusCore( 4445): [2026-10-25T14:46:16.304Z INFO  aether] [+] wireguard tunnel validated (end-to-end data confirmed); serving socks5
+10-25 14:46:16.304 I/NimbusCore( 4445): [2026-10-25T14:46:16.304Z INFO  aether::socks] [+] socks5 server listening on 127.0.0.1:1819
+10-25 14:46:16.348 I/NimbusCore( 4445): [2026-10-25T14:46:16.345Z INFO  aether::exitloc] [+] wireguard exit: 104.28.205.117, US via LAX, 40ms to cloudflare, warp on
+10-25 14:46:43.745 I/NimbusCore( 4445): [2026-10-25T14:46:43.732Z INFO  aether] Aether v2.4.0
+10-25 14:46:43.745 I/NimbusCore( 4445): [2026-10-25T14:46:43.733Z INFO  aether::sysprofile] [*] performance profile: Low (cpus=2 mem=2475MB); scan concurrency cap=4, udp socket buffer=256KB, netstack tcp buffers=256KB rx/128KB tx, netstack udp buffer=32KB, channel capacity=128, h2 windows=2048KB/4096KB
+10-25 14:46:43.745 I/NimbusCore( 4445): [2026-10-25T14:46:43.733Z INFO  aether::psiphon] [*] starting psiphon with no tunnel underneath it
+10-25 14:46:43.745 I/NimbusCore( 4445): [2026-10-25T14:46:43.733Z INFO  aether::psiphon] [*] psiphon settings read from /data/user/0/com.samaliyan.nimbus/files/core/psiphon-overrides.json
+10-25 14:46:43.745 I/NimbusCore( 4445): [2026-10-25T14:46:43.733Z INFO  aether::psiphon] [*] psiphon shape: Auto
+10-25 14:46:43.746 I/NimbusCore( 4445): [2026-10-25T14:46:43.746Z INFO  aether::psiphon] [*] starting psiphon from /data/app/~~QDgQgjeBOVG9ra3AwgFYJw==/com.samaliyan.nimbus-zw9-FLG1jq7e3Sc7vIWdcw==/lib/x86_64/libpsiphon.so
+10-25 14:46:43.746 I/NimbusCore( 4445): [2026-10-25T14:46:43.746Z INFO  aether::psiphon] [*] psiphon trusts the ca store at /system/etc/security/cacerts:/apex/com.android.conscrypt/cacerts
+10-25 14:46:43.891 I/NimbusCore( 4445): [2026-10-25T14:46:43.891Z WARN  aether::psiphon] [-] psiphon: Config migration: psiphon.(*Config).Commit#2002: psiphon.DoFileMigration#263: (psiphon.boltdb) old path does not exist
+10-25 14:46:43.891 I/NimbusCore( 4445): [2026-10-25T14:46:43.891Z WARN  aether::psiphon] [-] psiphon: Config migration: psiphon.(*Config).Commit#2002: psiphon.DoFileMigration#263: (psiphon.boltdb.lock) old path does not exist
+10-25 14:46:43.897 I/NimbusCore( 4445): [2026-10-25T14:46:43.897Z WARN  aether::psiphon] [-] psiphon: ResolveIP: resolver.(*Resolver).updateNetworkState#1219: unable to determine IPv6 route: resolver.hasRoutableIPv6Interface#1475: route ip+net: netlinkrib: permission denied
+10-25 14:46:45.808 I/NimbusCore( 4445): [2026-10-25T14:46:45.808Z INFO  aether::psiphon] [+] psiphon is ready; 127.0.0.1:1819 leaves through psiphon
+10-25 14:46:46.060 I/NimbusCore( 4445): [2026-10-25T14:46:46.060Z INFO  aether::exitloc] [+] psiphon exit: 217.138.222.83, IE via DUB, 251ms to cloudflare
+10-25 14:47:24.893 I/NimbusCore( 4445): [2026-10-25T14:47:24.891Z INFO  aether] Aether v2.4.0
+10-25 14:47:24.893 I/NimbusCore( 4445): [2026-10-25T14:47:24.891Z INFO  aether::sysprofile] [*] performance profile: Low (cpus=2 mem=2475MB); scan concurrency cap=4, udp socket buffer=256KB, netstack tcp buffers=256KB rx/128KB tx, netstack udp buffer=32KB, channel capacity=128, h2 windows=2048KB/4096KB
+10-25 14:47:24.915 I/NimbusCore( 4445): [2026-10-25T14:47:24.892Z INFO  aether::tor::with_tor] [*] bootstrapping tor with no tunnel underneath it
+10-25 14:47:24.921 I/NimbusCore( 4445): 2026-10-25T14:47:24.921449Z  INFO tor_memquota::mtracker: Memory quota tracking initialised max=1.81 GiB low_water=1.36 GiB
+10-25 14:47:25.141 I/NimbusCore( 4445): [2026-10-25T14:47:25.141Z INFO  aether::tor::with_tor] [*] tor reaching the network: 0%: connecting to the internet; not downloading
+10-25 14:47:25.145 I/NimbusCore( 4445): [2026-10-25T14:47:25.145Z INFO  aether::tor::with_tor] [*] tor reaching the network: 0%: connecting to the internet; directory is fetching a consensus
+10-25 14:47:25.145 I/NimbusCore( 4445): 2026-10-25T14:47:25.145506Z  INFO tor_dirmgr: Didn't get usable directory from cache.
+10-25 14:47:25.145 I/NimbusCore( 4445): 2026-10-25T14:47:25.145808Z  INFO tor_dirmgr::bootstrap: 1: Looking for a consensus. attempt=1
+10-25 14:47:25.285 I/NimbusCore( 4445): [2026-10-25T14:47:25.284Z INFO  aether::tor::with_tor] [*] tor reaching the network: 8%: handshaking with Tor relays; directory is fetching a consensus
+10-25 14:47:25.721 I/NimbusCore( 4445): [2026-10-25T14:47:25.721Z INFO  aether::tor::with_tor] [*] tor reaching the network: 15%: connecting successfully; directory is fetching a consensus
+10-25 14:47:27.133 I/NimbusCore( 4445): 2026-10-25T14:47:27.133217Z  INFO tor_dirmgr::bootstrap: 1: Downloading certificates for consensus (we are missing 9/9). attempt=1
+10-25 14:47:27.133 I/NimbusCore( 4445): [2026-10-25T14:47:27.133Z INFO  aether::tor::with_tor] [*] tor reaching the network: 36%: connecting successfully; directory is fetching authority certificates (0/9)
+10-25 14:47:27.711 I/NimbusCore( 4445): [2026-10-25T14:47:27.711Z INFO  aether::tor::with_tor] [*] tor reaching the network: 45%: connecting successfully; directory is fetching authority certificates (9/9)
+10-25 14:47:27.743 I/NimbusCore( 4445): 2026-10-25T14:47:27.743525Z  INFO tor_dirmgr::bootstrap: 1: Downloading microdescriptors (we are missing 9222). attempt=1
+10-25 14:47:27.744 I/NimbusCore( 4445): [2026-10-25T14:47:27.744Z INFO  aether::tor::with_tor] [*] tor reaching the network: 45%: connecting successfully; directory is fetching microdescriptors (0/9222)
+10-25 14:47:41.816 I/NimbusCore( 4445): 2026-10-25T14:47:41.816857Z  INFO tor_dirclient: Circ 2.0: Retiring circuit because of directory failure: Partial response
+10-25 14:47:41.817 I/NimbusCore( 4445): 2026-10-25T14:47:41.816890Z  INFO tor_dirmgr::bootstrap: Marking SourceInfo { tunnel: UniqId { chan: 2, circ: 0 }, cache_id: [scrubbed] } as failed error=Problem downloading directory object error.sources=[Error fetching directory information, Request failed from [scrubbed] via Circ 2.0: directory timed out, directory timed out]
+10-25 14:47:47.510 I/NimbusCore( 4445): 2026-10-25T14:47:47.509880Z  INFO tor_dirclient: Circ 2.0: Retiring circuit because of directory failure: Partial response
+10-25 14:47:47.510 I/NimbusCore( 4445): 2026-10-25T14:47:47.509916Z  INFO tor_dirmgr::bootstrap: Marking SourceInfo { tunnel: UniqId { chan: 2, circ: 0 }, cache_id: [scrubbed] } as failed error=Problem downloading directory object error.sources=[Error fetching directory information, Request failed from [scrubbed] via Circ 2.0: directory timed out, directory timed out]
+10-25 14:47:55.557 I/NimbusCore( 4445): 2026-10-25T14:47:55.557103Z  INFO tor_dirclient: Circ 2.0: Retiring circuit because of directory failure: Partial response
+10-25 14:47:55.557 I/NimbusCore( 4445): 2026-10-25T14:47:55.557137Z  INFO tor_dirmgr::bootstrap: Marking SourceInfo { tunnel: UniqId { chan: 2, circ: 0 }, cache_id: [scrubbed] } as failed error=Problem downloading directory object error.sources=[Error fetching directory information, Request failed from [scrubbed] via Circ 2.0: directory timed out, directory timed out]
+10-25 14:47:56.091 I/NimbusCore( 4445): 2026-10-25T14:47:56.091386Z  INFO tor_dirmgr: Marked consensus usable.
+10-25 14:47:56.092 I/NimbusCore( 4445): [2026-10-25T14:47:56.091Z INFO  aether::tor::with_tor] [*] tor reaching the network: 96%: connecting successfully; directory is fetching microdescriptors (8623/9222)
+10-25 14:47:56.097 I/NimbusCore( 4445): 2026-10-25T14:47:56.097183Z  INFO tor_dirmgr: We have enough information to build circuits.
+10-25 14:47:56.097 I/NimbusCore( 4445): [2026-10-25T14:47:56.097Z INFO  aether::tor::with_tor] [*] tor reaching the network: trying a way out through check.torproject.org:443
+10-25 14:47:56.097 I/NimbusCore( 4445): [2026-10-25T14:47:56.097Z INFO  aether::tor::with_tor] [*] tor reaching the network: 100%: connecting successfully; directory is usable, fresh until 2026-10-25 15:00:00 UTC, and valid until 2026-10-25 17:00:00 UTC
+10-25 14:47:57.092 I/NimbusCore( 4445): 2026-10-25T14:47:57.091983Z  INFO tor_guardmgr::guard: We have found that guard [scrubbed] is usable.
+10-25 14:47:57.098 I/NimbusCore( 4445): 2026-10-25T14:47:57.098106Z  INFO tor_dirmgr::bootstrap: 2: Downloading microdescriptors (we are missing 599). attempt=1
+10-25 14:47:57.334 I/NimbusCore( 4445): [2026-10-25T14:47:57.334Z INFO  aether::tor::with_tor] [+] tor reaching the network: the way out is open
+10-25 14:47:57.334 I/NimbusCore( 4445): [2026-10-25T14:47:57.334Z INFO  aether::tor::with_tor] [+] tor is ready; 127.0.0.1:1819 leaves through tor
+10-25 14:47:57.334 I/NimbusCore( 4445): [2026-10-25T14:47:57.334Z INFO  aether::socks] [+] tor socks5 listening on 127.0.0.1:1819
+10-25 14:47:57.713 I/NimbusCore( 4445): [2026-10-25T14:47:57.712Z INFO  aether::exitloc] [+] tor exit: 37.114.50.18, T1 via FRA, 378ms to cloudflare
+10-25 14:47:58.756 I/NimbusCore( 4445): 2026-10-25T14:47:58.756460Z  INFO tor_dirmgr: Directory is complete. attempt=1
