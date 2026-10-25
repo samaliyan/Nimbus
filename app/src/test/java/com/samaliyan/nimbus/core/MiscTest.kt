@@ -63,5 +63,11 @@ class MiscTest {
         assertEquals(2L, r.size)
         assertEquals("u", ReleaseParser.parse(json, listOf("x86"))!!.apkUrl)
         assertEquals("v7", ReleaseParser.parse(json, listOf("armeabi-v7a"))!!.apkUrl)
+
+        val t = ReleaseParser.fromTag("a/b", "v1.0.9", listOf("arm64-v8a", "armeabi-v7a"))!!
+        assertEquals("1.0.9", t.version)
+        assertEquals("https://github.com/a/b/releases/download/v1.0.9/Nimbus-1.0.9-arm64-v8a.apk", t.apkUrl)
+        assertEquals("Nimbus-1.0.9-universal.apk", ReleaseParser.fromTag("a/b", "v1.0.9", listOf("x86"))!!.apkName)
+        assertNull(ReleaseParser.fromTag("a/b", "v1/../x", listOf("x86")))
     }
 }

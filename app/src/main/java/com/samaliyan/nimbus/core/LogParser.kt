@@ -77,10 +77,11 @@ object LogParser {
         when {
             lower.contains("; reconnecting") || lower.contains("rescanning shortly") ||
                 lower.contains("lost its tunnel") -> out += CoreEvent.Reconnecting
-            msg.startsWith("[+]") && (lower.contains(" ready") || lower.contains("using cloudflare edge") ||
-                lower.contains("validated") || lower.contains("established") ||
-                lower.contains("still works") || lower.contains("skipping the scan") ||
-                lower.contains("reached a server")) -> out += CoreEvent.Recovered
+            // WARP routes come back with a new "listening" line (see the service); Psiphon and
+            // Tor say so themselves. Lines like "using cloudflare edge" come before the tunnel
+            // is tried, so they do not mean it works yet.
+            lower.contains("psiphon reached a server") || lower.contains("the way out is open") ->
+                out += CoreEvent.Recovered
         }
         stageOf(lower)?.let { out += CoreEvent.Stage(it) }
         return out

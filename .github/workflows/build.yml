@@ -193,6 +193,7 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
+          profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           script: SHOTS=shots tools/ci-run.sh python3 tools/e2e.py dist/Nimbus-*-x86_64.apk

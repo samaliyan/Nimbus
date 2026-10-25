@@ -74,7 +74,7 @@ fun UpdateDialog() {
                 text = {
                     Column {
                         Text(
-                            stringResource(R.string.update_current, BuildConfig.VERSION_NAME, Format.bytes(context, release.size)),
+                            stringResource(R.string.update_current, BuildConfig.VERSION_NAME, if (release.size > 0) Format.bytes(context, release.size) else "—"),
                             style = MaterialTheme.typography.bodySmall,
                             color = n.muted,
                         )

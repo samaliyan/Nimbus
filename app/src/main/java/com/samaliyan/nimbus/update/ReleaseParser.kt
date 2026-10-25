@@ -39,4 +39,18 @@ object ReleaseParser {
         }
         return false
     }
+
+    private val builtAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
+    /**
+     * The release when only its tag is known (GitHub's page redirect, which is not rate limited
+     * like the API): the APK names follow the pattern the build gives them.
+     */
+    fun fromTag(repo: String, tag: String, abis: List<String>): Release? {
+        val version = tag.trim().removePrefix("v")
+        if (version.isEmpty() || version.any { !(it.isLetterOrDigit() || it == '.' || it == '-') }) return null
+        val abi = abis.firstOrNull { it in builtAbis } ?: "universal"
+        val name = "Nimbus-$version-$abi.apk"
+        return Release(version, "", "https://github.com/$repo/releases/download/v$version/$name", name, 0)
+    }
 }

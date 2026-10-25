@@ -267,18 +267,17 @@ class NimbusService : VpnService() {
             is CoreEvent.Listening -> {
                 val port = event.address.substringAfterLast(':').toIntOrNull()
                 val overlay = settings.protocol == Protocol.TOR || settings.protocol == Protocol.PSIPHON
-                if (port == settings.socksPort && !overlay) onReady()
+                if (port == settings.socksPort && !overlay) {
+                    // The core serves the proxy again each time a new tunnel works.
+                    if (state is TunnelState.Reconnecting) recovered(state) else onReady()
+                }
             }
             CoreEvent.OverlayReady -> onReady()
             CoreEvent.Reconnecting -> if (state is TunnelState.Connected) {
                 Tunnel.setState(TunnelState.Reconnecting(state.since, state.peer))
                 refreshNotification()
             }
-            CoreEvent.Recovered -> if (state is TunnelState.Reconnecting) {
-                Tunnel.setState(TunnelState.Connected(state.since, peer ?: state.peer))
-                refreshNotification()
-                probeSoon()
-            }
+            CoreEvent.Recovered -> if (state is TunnelState.Reconnecting) recovered(state)
             is CoreEvent.Stats -> if (settings.connMode == ConnMode.PROXY && ready) {
                 val now = System.currentTimeMillis()
                 val dt = (now - lastStatsAt).coerceAtLeast(1)
@@ -293,6 +292,12 @@ class NimbusService : VpnService() {
             }
             is CoreEvent.Fatal -> lastError = LogParser.shortError(event.message)
         }
+    }
+
+    private fun recovered(state: TunnelState.Reconnecting) {
+        Tunnel.setState(TunnelState.Connected(state.since, peer ?: state.peer))
+        refreshNotification()
+        probeSoon()
     }
 
     private fun onReady() {
@@ -429,6 +434,9 @@ class NimbusService : VpnService() {
             return t.getString(R.string.err_tun, "tun2socks")
         }
         tunnelStarted = true
+        // hev reports a bad config or tun only by ending its thread shortly after starting it.
+        Thread.sleep(300)
+        if (!TProxyService.TProxyIsRunning()) return t.getString(R.string.err_tun, "tun2socks")
         return null
     }
 
@@ -444,6 +452,10 @@ class NimbusService : VpnService() {
                 while (isActive) {
                     delay(1000)
                     if (gen != generation) break
+                    if (!TProxyService.TProxyIsRunning()) {
+                        launch(control) { if (gen == generation) fail(text().getString(R.string.err_tun, "tun2socks stopped")) }
+                        break
+                    }
                     val st = runCatching { TProxyService.TProxyGetStats() }.getOrNull() ?: continue
                     val now = System.currentTimeMillis()
                     val dt = (now - prevAt).coerceAtLeast(1)
@@ -470,6 +482,9 @@ class NimbusService : VpnService() {
     /** Checks the exit address now, and again every few minutes while connected. */
     private fun probeSoon() {
         probeJob?.cancel()
+        // An exit seen before a reconnect may no longer be true; show it as being checked.
+        Tunnel.setExit(null)
+        Tunnel.setLatency(null)
         val port = settings.socksPort
         val gen = generation
         probeJob = scope.launch(Dispatchers.IO) {

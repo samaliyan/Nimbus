@@ -78,7 +78,7 @@ object Updater {
         c.connectTimeout = 20_000
         c.readTimeout = 30_000
         c.setRequestProperty("User-Agent", "Nimbus/${BuildConfig.VERSION_NAME}")
-        c.setRequestProperty("Accept", "application/vnd.github+json")
+        if (url.startsWith("https://api.github.com/")) c.setRequestProperty("Accept", "application/vnd.github+json")
         return c
     }
 
@@ -86,14 +86,19 @@ object Updater {
         if (_state.value is UpdateState.Downloading) return@withContext
         if (!quiet) _state.value = UpdateState.Checking
         try {
+            val abis = Build.SUPPORTED_ABIS.toList()
             val c = open("https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases/latest")
-            val body = try {
-                if (c.responseCode != 200) throw IllegalStateException("GitHub: HTTP ${c.responseCode}")
-                c.inputStream.bufferedReader().use { it.readText() }
+            val release = try {
+                when (c.responseCode) {
+                    200 -> ReleaseParser.parse(c.inputStream.bufferedReader().use { it.readText() }, abis)
+                    // The API allows few requests per address, and a VPN exit is shared by many
+                    // people; the release page's redirect names the latest tag without that limit.
+                    403, 429 -> latestTag()?.let { ReleaseParser.fromTag(BuildConfig.UPDATE_REPO, it, abis) }
+                    else -> throw IllegalStateException("GitHub: HTTP ${c.responseCode}")
+                }
             } finally {
                 c.disconnect()
             }
-            val release = ReleaseParser.parse(body, Build.SUPPORTED_ABIS.toList())
             _state.value = when {
                 release == null -> if (quiet) UpdateState.Idle else UpdateState.Failed("no apk in the latest release")
                 ReleaseParser.isNewer(release.version, BuildConfig.VERSION_NAME) -> UpdateState.Available(release)
@@ -104,6 +109,16 @@ object Updater {
             throw e
         } catch (e: Exception) {
             _state.value = if (quiet) UpdateState.Idle else UpdateState.Failed(e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    private fun latestTag(): String? {
+        val c = open("https://github.com/${BuildConfig.UPDATE_REPO}/releases/latest")
+        c.instanceFollowRedirects = false
+        return try {
+            c.getHeaderField("Location")?.substringAfterLast("/tag/", "")?.takeIf { it.isNotEmpty() }
+        } finally {
+            c.disconnect()
         }
     }
 

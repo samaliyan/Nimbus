@@ -46,8 +46,9 @@ class LogParserTest {
     @Test fun reconnectAndRecover() {
         assertTrue(events("[t WARN  aether] [-] MASQUE tunnel ended: timeout; reconnecting").contains(CoreEvent.Reconnecting))
         assertTrue(events("[t WARN  aether] [-] no usable MASQUE gateway found: x; rescanning shortly").contains(CoreEvent.Reconnecting))
-        assertTrue(events("[t INFO  aether] [+] using cloudflare edge 1.2.3.4:443").contains(CoreEvent.Recovered))
-        assertTrue(events("[t INFO  aether] [+] gool ready: masque 1.2.3.4:443 carries wireguard 5.6.7.8:2408").contains(CoreEvent.Recovered))
+        // Picking a gateway is not yet a working tunnel.
+        assertTrue(events("[t INFO  aether] [+] using cloudflare edge 1.2.3.4:443").none { it == CoreEvent.Recovered })
+        assertTrue(events("[t INFO  aether::psiphon] [+] psiphon reached a server at 1.2.3.4:443").contains(CoreEvent.Recovered))
     }
 
     @Test fun stats() {

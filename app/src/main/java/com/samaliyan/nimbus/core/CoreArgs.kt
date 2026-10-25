@@ -23,7 +23,16 @@ object CoreArgs {
         val a = mutableListOf<String>()
         val host = bindHost(s)
         a += listOf("--bind", "$host:${s.socksPort}")
-        if (s.httpProxy) a += listOf("--http-proxy", "$host:${s.httpPort}")
+        if (s.httpProxy) {
+            // With no tunnel, the core hands its own HTTP listener over to tor or psiphon,
+            // which take the address through their own option.
+            val flag = when (s.protocol) {
+                Protocol.TOR -> "--tor-http"
+                Protocol.PSIPHON -> "--psiphon-http"
+                else -> "--http-proxy"
+            }
+            a += listOf(flag, "$host:${s.httpPort}")
+        }
 
         when (s.protocol) {
             Protocol.MASQUE -> a += "--masque"
@@ -165,7 +174,10 @@ object Validate {
             if (quote != null) { if (c == quote) quote = null } else if (c == '"' || c == '\'') quote = c
         }
         if (quote != null) return false
-        val owned = setOf("--bind", "--http-proxy")
+        val owned = setOf(
+            "--bind", "--http-proxy", "--tor-http", "--psiphon-http", "--tor-only", "--psiphon-only",
+            "--stats", "--stats-secs",
+        )
         return CoreArgs.splitArgs(text).none { arg -> owned.any { arg == it || arg.startsWith("$it=") } }
     }
 }

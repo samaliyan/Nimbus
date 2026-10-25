@@ -29,17 +29,19 @@ def record(name, ok, detail="", required=True):
 
 TRACE_CMDS = [
     # Sent from the adb shell, which is not excluded from the VPN, by name so DNS is tested too.
-    "curl -sS -m 25 http://www.cloudflare.com/cdn-cgi/trace",
-    "printf 'GET /cdn-cgi/trace HTTP/1.0\\r\\nHost: www.cloudflare.com\\r\\n\\r\\n' | toybox nc -w 20 www.cloudflare.com 80",
+    # toybox nc stops at the end of its input, so the input stays open while the answer arrives.
+    "(printf 'GET /cdn-cgi/trace HTTP/1.0\\r\\nHost: www.cloudflare.com\\r\\n\\r\\n'; sleep 10) | nc www.cloudflare.com 80",
+    "(printf 'GET /cdn-cgi/trace HTTP/1.0\\r\\nHost: 1.1.1.1\\r\\n\\r\\n'; sleep 10) | nc 1.1.1.1 80",
 ]
 
 
 def trace_through_vpn():
     out = ""
-    for cmd in TRACE_CMDS:
+    for n, cmd in enumerate(TRACE_CMDS):
         out = subprocess.run(["adb", "shell", cmd], capture_output=True, text=True, timeout=60).stdout
         if "ip=" in out:
-            return out
+            # Reaching it only by address means name lookups failed.
+            return out + ("\ndns=failed\n" if n > 0 else "\ndns=ok\n")
     tools = subprocess.run(["adb", "shell", "which curl nc toybox; toybox --version"], capture_output=True, text=True).stdout
     return out + "\n[tools: " + tools.replace("\n", " ") + "]"
 
@@ -102,8 +104,9 @@ def main(apk):
         ui.shot("03-home-connected-fa")
         out = trace_through_vpn()
         ip, warp = field(out, "ip"), field(out, "warp")
-        record("traffic and DNS go through the VPN", warp in ("on", "plus") and ip != direct_ip,
-               f"ip={ip} warp={warp} loc={field(out, 'loc')}"
+        record("traffic and DNS go through the VPN",
+               warp in ("on", "plus") and ip != direct_ip and field(out, "dns") == "ok",
+               f"ip={ip} warp={warp} loc={field(out, 'loc')} dns={field(out, 'dns')}"
                + ("" if ip else " output=" + out[-300:].replace("\n", " ").replace("|", "/")))
         out = trace_through_proxy(1819)
         record("SOCKS5 proxy works while in VPN mode", field(out, "warp") in ("on", "plus"), f"ip={field(out, 'ip')}")
@@ -134,7 +137,7 @@ def main(apk):
 
     # ---- WireGuard in proxy mode ----
     ui.tap("Proxy", exact=True)
-    ui.tap("WireGuard", exact=True)
+    ui.tap("WireGuard", exact=True, scroll=True)
     ok, secs = connect_and_wait("Connected", 300, "10-wireguard")
     record("WireGuard connects (proxy mode)", ok, f"in {secs}s", required=False)
     if ok:
@@ -146,7 +149,7 @@ def main(apk):
 
     # ---- Psiphon in VPN mode ----
     ui.tap("VPN", exact=True)
-    ui.tap("Psiphon", exact=True)
+    ui.tap("Psiphon", exact=True, scroll=True)
     ok, secs = connect_and_wait("Connected", 240, "12-psiphon")
     record("Psiphon connects (VPN mode)", ok, f"in {secs}s", required=False)
     if ok:
@@ -162,7 +165,7 @@ def main(apk):
     disconnect("Not connected", "Disconnect")
 
     # Back to the defaults a new user sees, and a light-theme English shot for the README.
-    ui.tap("MASQUE", exact=True)
+    ui.tap("MASQUE", exact=True, scroll=True)
     ui.tap("Settings", exact=True)
     ui.tap("Theme", exact=True, scroll=True)
     ui.tap("Light", exact=True)

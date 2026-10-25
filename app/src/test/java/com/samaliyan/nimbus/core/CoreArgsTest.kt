@@ -58,6 +58,13 @@ class CoreArgsTest {
         assertFalse("--quick-reconnect" in a)
     }
 
+    @Test fun httpProxyFlagFollowsTheRoute() {
+        assertTrue("--tor-http" in args(Settings(protocol = Protocol.TOR, httpProxy = true)))
+        assertTrue("--psiphon-http" in args(Settings(protocol = Protocol.PSIPHON, httpProxy = true)))
+        val a = args(Settings(protocol = Protocol.TOR, httpProxy = true))
+        assertFalse("--http-proxy" in a)
+    }
+
     @Test fun torOnly() {
         val launch = CoreArgs.build(Settings(protocol = Protocol.TOR), paths)
         assertTrue("--tor-only" in launch.args)
