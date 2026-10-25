@@ -37,7 +37,10 @@ def dump():
 
 
 def find(text, exact=False):
-    for node in dump().iter("node"):
+    root = dump()
+    if dismiss_system_dialog(root):
+        root = dump()
+    for node in root.iter("node"):
         values = [node.get("text") or "", node.get("content-desc") or ""]
         for v in values:
             if (v == text) if exact else (text in v):
@@ -45,6 +48,22 @@ def find(text, exact=False):
                 x1, y1, x2, y2 = map(int, m.groups())
                 return (x1 + x2) // 2, (y1 + y2) // 2
     return None
+
+
+def dismiss_system_dialog(root):
+    """A slow emulator can show "X isn't responding" over the app; answer Wait and go on."""
+    texts = [n.get("text") or "" for n in root.iter("node")]
+    if not any("isn't responding" in t for t in texts):
+        return False
+    for node in root.iter("node"):
+        if (node.get("text") or "") == "Wait":
+            m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", node.get("bounds"))
+            x1, y1, x2, y2 = map(int, m.groups())
+            shell(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
+            time.sleep(1.5)
+            print("dismissed a system 'not responding' dialog")
+            return True
+    return False
 
 
 def screen_size():
@@ -78,7 +97,10 @@ def wait_text(texts, timeout):
         texts = [texts]
     end = time.time() + timeout
     while time.time() < end:
-        xml = ET.tostring(dump(), encoding="unicode")
+        root = dump()
+        if dismiss_system_dialog(root):
+            root = dump()
+        xml = ET.tostring(root, encoding="unicode")
         for t in texts:
             if t in xml:
                 return t
