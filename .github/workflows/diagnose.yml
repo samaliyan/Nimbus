@@ -1,0 +1,99 @@
+name: diagnose
+
+# Builds test copies of the app, each without one of the things Play Protect may object to,
+# installable side by side, so a phone can show which one it flags.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  HEV_REPO: https://github.com/heiher/hev-socks5-tunnel.git
+  HEV_COMMIT: c5584feca8f6df70ee53eb2879e034b849a3d15a
+  NDK_VERSION: 27.2.12479018
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [full, notools, noinstall, noquery, minimal]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Core and tunnel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh api repos/CluvexStudio/Aether/releases/latest --jq .tag_name)
+          tools/ci-run.sh bash tools/fetch-core.sh "$tag" app/src/main/jniLibs build/licenses
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+          git clone -q --recursive "$HEV_REPO" build/hev
+          cd build/hev && git checkout -q "$HEV_COMMIT" && git submodule update -q --init --recursive
+          "$ANDROID_HOME/ndk/$NDK_VERSION/ndk-build" NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk \
+            NDK_APPLICATION_MK=Application.mk APP_ABI="arm64-v8a armeabi-v7a x86_64" APP_PLATFORM=android-29 -j"$(nproc)" > /dev/null
+          for abi in arm64-v8a armeabi-v7a x86_64; do cp "libs/$abi/libhev-socks5-tunnel.so" "../../app/src/main/jniLibs/$abi/"; done
+      - name: Make the variant
+        run: |
+          v=${{ matrix.variant }}
+          m=app/src/main/AndroidManifest.xml
+          no_tools() { rm -f app/src/main/jniLibs/*/libpsiphon.so app/src/main/jniLibs/*/liblyrebird.so; }
+          no_install() { sed -i '/REQUEST_INSTALL_PACKAGES/d' "$m"; }
+          no_query() { python3 - "$m" <<'PY'
+          import re, sys
+          p = sys.argv[1]; s = open(p).read()
+          s = re.sub(r'\s*<uses-permission\s+android:name="android.permission.QUERY_ALL_PACKAGES"[^>]*/>', '', s)
+          open(p, 'w').write(s)
+          PY
+          }
+          case "$v" in
+            notools) no_tools ;;
+            noinstall) no_install ;;
+            noquery) no_query ;;
+            minimal) no_tools; no_install; no_query ;;
+          esac
+          sed -i "s#<string name=\"app_name\" translatable=\"false\">Nimbus</string>#<string name=\"app_name\" translatable=\"false\">Nimbus $v</string>#" app/src/main/res/values/strings.xml
+          echo "APP_ID_SUFFIX=.diag.$v" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=0.0.0-diag-$v" >> "$GITHUB_ENV"
+          grep -c 'uses-permission' "$m"; ls app/src/main/jniLibs/arm64-v8a
+      - name: Build
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          export SIGNING_KEYSTORE="$RUNNER_TEMP/release.jks"
+          tools/ci-run.sh ./gradlew --no-daemon assembleRelease
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "dist/Nimbus-diag-${{ matrix.variant }}-arm64-v8a.apk"
+          cp app/build/outputs/apk/release/app-universal-release.apk "dist/Nimbus-diag-${{ matrix.variant }}-universal.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diag-${{ matrix.variant }}
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="diag-${{ github.run_number }}"
+          gh release create "$tag" dist/*.apk -R "${{ github.repository }}" --prerelease --title "Play Protect test $tag" \
+            --notes "Test copies for finding what Play Protect flags. Each installs beside the others. Not for daily use."

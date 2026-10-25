@@ -17,7 +17,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.samaliyan.nimbus"
+        applicationId = "com.samaliyan.nimbus" + (System.getenv("APP_ID_SUFFIX") ?: "")
         // The Aether core is built for Android 10 (API 29) and later.
         minSdk = 29
         targetSdk = 35

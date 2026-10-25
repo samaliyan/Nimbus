@@ -28,7 +28,7 @@ object ReleaseParser {
 
     /** "1.2.10" > "1.2.9"; a dev build ("0.0.0-dev") never offers an update. */
     fun isNewer(candidate: String, current: String): Boolean {
-        if (current.contains("dev")) return false
+        if (current.contains("dev") || current.contains("diag")) return false
         fun parts(v: String) = v.substringBefore('-').split('.').map { it.toIntOrNull() ?: 0 }
         val a = parts(candidate)
         val b = parts(current)
