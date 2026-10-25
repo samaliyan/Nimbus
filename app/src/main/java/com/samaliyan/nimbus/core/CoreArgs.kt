@@ -67,6 +67,7 @@ object CoreArgs {
         if (s.protocol == Protocol.PSIPHON) {
             val region = s.psiphonRegion.trim().uppercase()
             if (region.isNotEmpty()) a += listOf("--psiphon-region", region)
+            if (s.psiphonMode != PsiphonMode.AUTO) a += listOf("--psiphon-mode", s.psiphonMode.flag)
             if (paths.psiphonConfig != null && !s.extraArgs.contains("--psiphon-config")) {
                 a += listOf("--psiphon-config", paths.psiphonConfig)
             }

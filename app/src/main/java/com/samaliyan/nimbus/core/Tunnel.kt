@@ -9,7 +9,8 @@ sealed interface TunnelState {
     data object Idle : TunnelState
     data class Starting(val stage: ConnectStage) : TunnelState
     data class Connected(val since: Long, val peer: String?) : TunnelState
-    data class Reconnecting(val since: Long, val peer: String?) : TunnelState
+    /** [stalled]: the core reports the tunnel up, but a test request through it got no answer. */
+    data class Reconnecting(val since: Long, val peer: String?, val stalled: Boolean = false) : TunnelState
     data object Stopping : TunnelState
     data class Failed(val message: String) : TunnelState
 }

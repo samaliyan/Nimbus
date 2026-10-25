@@ -33,6 +33,7 @@ import com.samaliyan.nimbus.core.IpMode
 import com.samaliyan.nimbus.core.Lang
 import com.samaliyan.nimbus.core.Noize
 import com.samaliyan.nimbus.core.Protocol
+import com.samaliyan.nimbus.core.PsiphonMode
 import com.samaliyan.nimbus.core.ScanMode
 import com.samaliyan.nimbus.core.Settings
 import com.samaliyan.nimbus.core.SettingsStore
@@ -46,7 +47,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 private enum class Dialog {
-    PROTOCOL, TRANSPORT, SCAN, IP, NOIZE, PEER, DNS, EXIT, REGION, EXTRA,
+    PROTOCOL, TRANSPORT, SCAN, IP, NOIZE, PEER, DNS, EXIT, REGION, PSIPHON_MODE, EXTRA,
     SOCKS_PORT, HTTP_PORT, APP_FILTER, THEME, LANG, RESET,
 }
 
@@ -128,6 +129,8 @@ fun SettingsScreen(onPickApps: () -> Unit, snackbar: SnackbarHostState) {
             if (s.protocol == Protocol.PSIPHON) {
                 RowDivider()
                 SettingRow(stringResource(R.string.set_region), s.psiphonRegion.ifBlank { notSet }, ltrValue = s.psiphonRegion.isNotBlank()) { dialog = Dialog.REGION }
+                RowDivider()
+                SettingRow(stringResource(R.string.set_psiphon_mode), psiphonModeLabel(s.psiphonMode)) { dialog = Dialog.PSIPHON_MODE }
             }
             RowDivider()
             SettingRow(stringResource(R.string.set_extra), s.extraArgs.ifBlank { notSet }, ltrValue = s.extraArgs.isNotBlank()) { dialog = Dialog.EXTRA }
@@ -235,6 +238,11 @@ fun SettingsScreen(onPickApps: () -> Unit, snackbar: SnackbarHostState) {
             stringResource(R.string.set_region), s.psiphonRegion, stringResource(R.string.region_hint), "DE",
             valid = Validate::region, errorText = badValue, onSave = { v -> set { it.copy(psiphonRegion = v.uppercase()) } }, onDismiss = close,
         )
+        Dialog.PSIPHON_MODE -> ChoiceDialog(
+            stringResource(R.string.set_psiphon_mode),
+            PsiphonMode.entries.map { Choice(it, psiphonModeLabel(it), psiphonModeHint(it)) },
+            s.psiphonMode, { v -> set { it.copy(psiphonMode = v) } }, close,
+        )
         Dialog.EXTRA -> TextDialog(
             stringResource(R.string.set_extra), s.extraArgs, stringResource(R.string.extra_hint), "--ech auto",
             valid = Validate::extraArgs, errorText = badValue, onSave = { v -> set { it.copy(extraArgs = v) } }, onDismiss = close,
@@ -287,6 +295,24 @@ private fun scanHint(m: ScanMode) = stringResource(
         ScanMode.THOROUGH -> R.string.scan_thorough_hint
         ScanMode.VERIFIED -> R.string.scan_verified_hint
         ScanMode.IRONCLAD -> R.string.scan_ironclad_hint
+    }
+)
+
+@Composable
+private fun psiphonModeLabel(m: PsiphonMode) = stringResource(
+    when (m) {
+        PsiphonMode.AUTO -> R.string.psiphon_auto
+        PsiphonMode.CDN -> R.string.psiphon_cdn
+        PsiphonMode.DIRECT -> R.string.psiphon_direct
+    }
+)
+
+@Composable
+private fun psiphonModeHint(m: PsiphonMode) = stringResource(
+    when (m) {
+        PsiphonMode.AUTO -> R.string.psiphon_auto_hint
+        PsiphonMode.CDN -> R.string.psiphon_cdn_hint
+        PsiphonMode.DIRECT -> R.string.psiphon_direct_hint
     }
 )
 

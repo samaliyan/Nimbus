@@ -148,6 +148,15 @@
     <string name="exit_hint">Two-letter codes separated by commas. DE,NL allows only those; !IR,RU refuses those.</string>
     <string name="set_region">Psiphon exit country</string>
     <string name="region_hint">A two-letter code such as DE. Empty lets Psiphon choose.</string>
+    <string name="set_psiphon_mode">Psiphon connection</string>
+    <string name="psiphon_auto">Automatic</string>
+    <string name="psiphon_auto_hint">Psiphon picks the way. Default.</string>
+    <string name="psiphon_cdn">Through a CDN only</string>
+    <string name="psiphon_cdn_hint">Hides Psiphon behind big CDNs (meek). For networks that block everything else.</string>
+    <string name="psiphon_direct">Direct only</string>
+    <string name="psiphon_direct_hint">Never through a CDN. Try this when you see “meek round trip failed”.</string>
+    <string name="state_stalled">No traffic passes</string>
+    <string name="note_stalled">No traffic passes through the tunnel. Starting it again.</string>
     <string name="set_extra">Extra core options</string>
     <string name="extra_hint">Passed to the Aether core as they are, for options not shown here.</string>
     <string name="not_set">Not set</string>

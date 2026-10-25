@@ -147,6 +147,15 @@
     <string name="exit_hint">کد دوحرفی کشورها با ویرگول انگلیسی. DE,NL یعنی فقط این‌ها. !IR,RU یعنی همه به جز این‌ها.</string>
     <string name="set_region">کشور خروجی سایفون</string>
     <string name="region_hint">کد دوحرفی مثل DE. اگر خالی باشد، سایفون خودش انتخاب می‌کند.</string>
+    <string name="set_psiphon_mode">اتصال سایفون</string>
+    <string name="psiphon_auto">خودکار</string>
+    <string name="psiphon_auto_hint">سایفون خودش راه را انتخاب می‌کند. پیش‌فرض.</string>
+    <string name="psiphon_cdn">فقط از راه CDN</string>
+    <string name="psiphon_cdn_hint">سایفون را پشت شبکه‌های بزرگ CDN پنهان می‌کند (meek). برای شبکه‌هایی که بقیه‌ی راه‌ها را بسته‌اند.</string>
+    <string name="psiphon_direct">فقط مستقیم</string>
+    <string name="psiphon_direct_hint">هیچ‌وقت از CDN رد نمی‌شود. وقتی خطای «meek round trip failed» دیدید این را امتحان کنید.</string>
+    <string name="state_stalled">ترافیک رد نمی‌شود</string>
+    <string name="note_stalled">ترافیکی از تونل رد نمی‌شود. اتصال دوباره ساخته می‌شود.</string>
     <string name="set_extra">گزینه‌های اضافه‌ی هسته</string>
     <string name="extra_hint">همان‌طور که نوشته شود به هسته‌ی Aether داده می‌شود؛ برای گزینه‌هایی که اینجا نیستند.</string>
     <string name="not_set">تنظیم نشده</string>

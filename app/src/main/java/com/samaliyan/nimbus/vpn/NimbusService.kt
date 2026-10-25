@@ -21,6 +21,7 @@ import com.samaliyan.nimbus.core.ConnectStage
 import com.samaliyan.nimbus.core.CoreArgs
 import com.samaliyan.nimbus.core.CoreEvent
 import com.samaliyan.nimbus.core.CorePaths
+import com.samaliyan.nimbus.core.ExitInfo
 import com.samaliyan.nimbus.core.CoreRunner
 import com.samaliyan.nimbus.core.Level
 import com.samaliyan.nimbus.core.LogParser
@@ -522,20 +523,48 @@ class NimbusService : VpnService() {
         val port = settings.socksPort
         val gen = generation
         probeJob = scope.launch(Dispatchers.IO) {
+            var failures = 0
             while (isActive) {
                 val exit = Probe.exit(port)
                 val ms = if (exit != null) Probe.latency(port) else null
                 // A probe that outlived its connection must not write into the next one; the
                 // check and the write happen together on the control thread.
                 if (gen != generation) break
-                launch(control) {
-                    if (gen == generation) {
-                        if (exit != null) Tunnel.setExit(exit)
-                        Tunnel.setLatency(ms)
-                    }
-                }
-                delay(if (exit != null) 5 * 60_000L else 20_000L)
+                failures = if (exit != null) 0 else failures + 1
+                val failed = failures
+                launch(control) { if (gen == generation) onProbe(exit, ms, failed) }
+                delay(if (exit != null) 60_000L else 15_000L)
             }
+        }
+    }
+
+    /**
+     * The core can report a tunnel that carries nothing (Psiphon after its transport is cut, for
+     * one), so the probe is the judge: three failed requests in a row mean no traffic passes.
+     */
+    private fun onProbe(exit: ExitInfo?, ms: Long?, failures: Int) {
+        val state = Tunnel.state.value
+        if (exit != null) {
+            Tunnel.setExit(exit)
+            Tunnel.setLatency(ms)
+            if (state is TunnelState.Reconnecting && state.stalled) {
+                Tunnel.setState(TunnelState.Connected(state.since, state.peer))
+                refreshNotification()
+            }
+            return
+        }
+        Tunnel.setLatency(null)
+        if (failures < 3) return
+        if (state is TunnelState.Connected) {
+            Tunnel.setState(TunnelState.Reconnecting(state.since, state.peer, stalled = true))
+            refreshNotification()
+        }
+        // WARP routes reconnect by themselves; Psiphon and Tor do not notice, so they are restarted.
+        val overlay = settings.protocol == Protocol.TOR || settings.protocol == Protocol.PSIPHON
+        if (overlay && failures % 4 == 3) {
+            Tunnel.note(text().getString(R.string.note_stalled), Level.WARN)
+            teardown()
+            begin()
         }
     }
 
@@ -586,7 +615,7 @@ class NimbusService : VpnService() {
         val t = text()
         val title = when (state) {
             is TunnelState.Connected -> t.getString(R.string.state_connected)
-            is TunnelState.Reconnecting -> t.getString(R.string.state_reconnecting)
+            is TunnelState.Reconnecting -> t.getString(if (state.stalled) R.string.state_stalled else R.string.state_reconnecting)
             is TunnelState.Starting -> t.getString(Format.stageText(state.stage))
             else -> t.getString(R.string.state_connecting)
         }

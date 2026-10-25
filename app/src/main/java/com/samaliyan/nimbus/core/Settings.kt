@@ -25,6 +25,9 @@ enum class ScanMode(val flag: String) {
 
 enum class IpMode { V4, V6, DUAL }
 
+/** How Psiphon reaches its servers: its own choice, only through a CDN, or never through one. */
+enum class PsiphonMode(val flag: String) { AUTO("auto"), CDN("cdn"), DIRECT("direct") }
+
 /** AUTO leaves the choice to the core (firewall for MASQUE, balanced for WireGuard). */
 enum class Noize(val flag: String?) {
     AUTO(null), OFF("off"), LIGHT("light"), FIREWALL("firewall"), BALANCED("balanced"), GFW("gfw"), AGGRESSIVE("aggressive")
@@ -52,6 +55,7 @@ data class Settings(
     val dns: String = DEFAULT_DNS,
     val exitCountries: String = "",
     val psiphonRegion: String = "",
+    val psiphonMode: PsiphonMode = PsiphonMode.AUTO,
     val extraArgs: String = "",
     val socksPort: Int = 1819,
     val httpProxy: Boolean = false,
@@ -107,6 +111,7 @@ object SettingsStore {
             dns = p.getString("dns", d.dns) ?: d.dns,
             exitCountries = p.getString("exitCountries", d.exitCountries) ?: d.exitCountries,
             psiphonRegion = p.getString("psiphonRegion", d.psiphonRegion) ?: d.psiphonRegion,
+            psiphonMode = p.enum("psiphonMode", d.psiphonMode),
             extraArgs = p.getString("extraArgs", d.extraArgs) ?: d.extraArgs,
             socksPort = p.getInt("socksPort", d.socksPort),
             httpProxy = p.getBoolean("httpProxy", d.httpProxy),
@@ -135,6 +140,7 @@ object SettingsStore {
             .putString("dns", s.dns)
             .putString("exitCountries", s.exitCountries)
             .putString("psiphonRegion", s.psiphonRegion)
+            .putString("psiphonMode", s.psiphonMode.name)
             .putString("extraArgs", s.extraArgs)
             .putInt("socksPort", s.socksPort)
             .putBoolean("httpProxy", s.httpProxy)

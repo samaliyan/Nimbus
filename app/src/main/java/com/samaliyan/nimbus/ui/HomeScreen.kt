@@ -365,7 +365,7 @@ private fun StatusText(state: TunnelState, onOpenLog: () -> Unit) {
         TunnelState.Idle -> stringResource(R.string.state_idle)
         is TunnelState.Starting -> stringResource(Format.stageText(state.stage))
         is TunnelState.Connected -> stringResource(R.string.state_connected)
-        is TunnelState.Reconnecting -> stringResource(R.string.state_reconnecting)
+        is TunnelState.Reconnecting -> stringResource(if (state.stalled) R.string.state_stalled else R.string.state_reconnecting)
         TunnelState.Stopping -> stringResource(R.string.state_stopping)
         is TunnelState.Failed -> stringResource(R.string.state_failed)
     }

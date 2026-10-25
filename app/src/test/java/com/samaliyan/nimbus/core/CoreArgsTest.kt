@@ -80,6 +80,13 @@ class CoreArgsTest {
         assertEquals(3, fallback.getJSONArray("DNSResolverAlternateServers").length())
     }
 
+    @Test fun psiphonMode() {
+        assertFalse("--psiphon-mode" in args(Settings(protocol = Protocol.PSIPHON)))
+        val a = args(Settings(protocol = Protocol.PSIPHON, psiphonMode = PsiphonMode.DIRECT))
+        assertEquals("direct", a[a.indexOf("--psiphon-mode") + 1])
+        assertFalse("--psiphon-mode" in args(Settings(protocol = Protocol.MASQUE, psiphonMode = PsiphonMode.CDN)))
+    }
+
     @Test fun torOnly() {
         val launch = CoreArgs.build(Settings(protocol = Protocol.TOR), paths)
         assertTrue("--tor-only" in launch.args)
@@ -130,6 +137,7 @@ class CoreArgsTest {
         for (nz in Noize.entries) sets += Settings(noize = nz, protocol = Protocol.WIREGUARD)
         sets += Settings(peer = "162.159.198.1:443", exitCountries = "!IR,RU", dns = "8.8.8.8", quickReconnect = false, fragment = false)
         sets += Settings(protocol = Protocol.PSIPHON, psiphonRegion = "DE")
+        for (m in PsiphonMode.entries) sets += Settings(protocol = Protocol.PSIPHON, psiphonMode = m)
         sets += Settings(protocol = Protocol.MIM, peer = "[2606:4700:103::1]:443")
 
         val out = File(System.getProperty("user.dir"), "build/core-args.jsonl")
