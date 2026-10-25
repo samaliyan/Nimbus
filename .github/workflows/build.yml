@@ -1,0 +1,225 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      aether_tag:
+        description: "Aether release to bundle (empty = latest)"
+        required: false
+      release:
+        description: "Publish a release"
+        type: boolean
+        default: true
+  # Once a day: when the Aether project has published a new core, build and release with it.
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # hev-socks5-tunnel, pinned so a change upstream cannot change the app unnoticed.
+  HEV_REPO: https://github.com/heiher/hev-socks5-tunnel.git
+  HEV_COMMIT: c5584feca8f6df70ee53eb2879e034b849a3d15a
+  NDK_VERSION: 27.2.12479018
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.core.outputs.tag }}
+      build: ${{ steps.core.outputs.build }}
+      release: ${{ steps.core.outputs.release }}
+    steps:
+      - id: core
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.aether_tag }}
+        run: |
+          tag="$INPUT_TAG"
+          if [ -z "$tag" ]; then
+            tag=$(gh api repos/CluvexStudio/Aether/releases/latest --jq .tag_name)
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          build=true
+          release=false
+          case "${{ github.event_name }}" in
+            push) release=true ;;
+            workflow_dispatch) release=${{ inputs.release }} ;;
+            schedule)
+              # The core version of the last release is in its notes.
+              last=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .body 2>/dev/null || true)
+              if echo "$last" | grep -q "Aether core: $tag"; then build=false; else release=true; fi
+              ;;
+          esac
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "core $tag, build=$build, release=$release"
+
+  build:
+    needs: decide
+    if: needs.decide.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      signed: ${{ steps.key.outputs.signed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - id: ver
+        run: |
+          base=$(cat version.txt | tr -d '[:space:]')
+          version="$base.${{ github.run_number }}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "VERSION_NAME=$version" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=${{ github.run_number }}" >> "$GITHUB_ENV"
+          echo "CORE_VERSION=${{ needs.decide.outputs.tag }}" >> "$GITHUB_ENV"
+          echo "UPDATE_REPO=${{ github.repository }}" >> "$GITHUB_ENV"
+
+      - name: Fetch the Aether core
+        run: bash tools/fetch-core.sh "${{ needs.decide.outputs.tag }}" app/src/main/jniLibs build/licenses
+
+      - name: Install the NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+          echo "NDK=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build hev-socks5-tunnel
+        run: |
+          git clone --recursive "$HEV_REPO" build/hev
+          cd build/hev
+          git checkout "$HEV_COMMIT"
+          git submodule update --init --recursive
+          "$NDK/ndk-build" NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk \
+            APP_ABI="arm64-v8a armeabi-v7a x86_64" APP_PLATFORM=android-29 -j"$(nproc)"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            install -m 0644 "libs/$abi/libhev-socks5-tunnel.so" "../../app/src/main/jniLibs/$abi/"
+          done
+          cp LICENSE ../licenses/hev-socks5-tunnel-LICENSE.txt
+
+      - name: Signing key
+        id: key
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "SIGNING_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            # Without the key every build would carry a different signature and phones would
+            # refuse to update over it, so such a build is never released.
+            echo "::warning::No signing key secrets; this build is signed with a throwaway key and will not be released."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Unit tests and APKs
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+
+      - name: Check every command line the app builds against the real core
+        run: |
+          tag="${{ needs.decide.outputs.tag }}"
+          mkdir -p build/linux-core
+          curl -fsSL "https://github.com/CluvexStudio/Aether/releases/download/$tag/aether-linux-x86_64.tar.gz" | tar -xz -C build/linux-core
+          python3 tools/check-args.py build/linux-core/aether app/build/core-args.jsonl
+
+      - name: Collect APKs
+        run: |
+          mkdir -p dist
+          for f in app/build/outputs/apk/release/*.apk; do
+            abi=$(basename "$f" | sed -E 's/^app-(.*)-release\.apk$/\1/')
+            cp "$f" "dist/Nimbus-$VERSION_NAME-$abi.apk"
+          done
+          (cd build/licenses && zip -qr "../../dist/Nimbus-$VERSION_NAME-licenses.zip" .)
+          (cd dist && sha256sum *.apk > SHA256SUMS.txt)
+          ls -la dist
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner" verify --print-certs dist/*universal.apk | head -3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apks
+          path: dist/
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apks
+          path: dist
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Connect for real on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: SHOTS=shots python3 tools/e2e.py dist/Nimbus-*-x86_64.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-report
+          path: shots/
+      - name: Summary
+        if: always()
+        run: cat shots/results.md >> "$GITHUB_STEP_SUMMARY" || true
+
+  release:
+    needs: [decide, build, emulator]
+    if: needs.decide.outputs.release == 'true' && needs.build.outputs.signed == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apks
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: emulator-report
+          path: shots
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          CORE: ${{ needs.decide.outputs.tag }}
+        run: |
+          {
+            echo "Aether core: $CORE"
+            echo
+            if [ -s CHANGES.md ]; then cat CHANGES.md; echo; fi
+            echo "**Which file to install:** most phones need \`arm64-v8a\`. Older phones need \`armeabi-v7a\`. If unsure, install \`universal\` (larger, works on all)."
+            echo
+            echo "**کدام فایل را نصب کنم:** بیشتر گوشی‌ها \`arm64-v8a\`، گوشی‌های قدیمی \`armeabi-v7a\`. اگر مطمئن نیستید \`universal\` را نصب کنید."
+            echo
+            echo "### Emulator check"
+            cat shots/results.md
+          } > notes.md
+          gh release create "v$VERSION" dist/* --title "Nimbus $VERSION" --notes-file notes.md --target "$GITHUB_SHA"

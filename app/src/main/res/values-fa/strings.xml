@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="channel_connection">اتصال</string>
+
+    <string name="tab_home">خانه</string>
+    <string name="tab_log">گزارش</string>
+    <string name="tab_settings">تنظیمات</string>
+
+    <string name="mode_vpn">VPN</string>
+    <string name="mode_proxy">پراکسی</string>
+
+    <string name="state_idle">وصل نیست</string>
+    <string name="state_connecting">در حال اتصال…</string>
+    <string name="state_connected">وصل شد</string>
+    <string name="state_reconnecting">در حال اتصال دوباره…</string>
+    <string name="state_stopping">در حال قطع…</string>
+    <string name="state_failed">اتصال برقرار نشد</string>
+
+    <string name="stage_preparing">آماده‌سازی…</string>
+    <string name="stage_registering">ساختن حساب WARP…</string>
+    <string name="stage_scanning">پیدا کردن مسیر باز…</string>
+    <string name="stage_connecting">باز کردن تونل…</string>
+
+    <string name="hint_tap">برای اتصال لمس کنید</string>
+    <string name="hint_wait">روی شبکه‌ی فیلترشده، اتصال اول ممکن است یک دقیقه طول بکشد.</string>
+
+    <string name="action_connect">اتصال</string>
+    <string name="action_disconnect">قطع اتصال</string>
+    <string name="action_reconnect">اتصال دوباره</string>
+    <string name="action_view_log">دیدن گزارش</string>
+    <string name="action_test">آزمایش دوباره</string>
+
+    <string name="settings_changed">تنظیمات عوض شده؛ برای اعمال، دوباره وصل شوید.</string>
+
+    <string name="download">دریافت</string>
+    <string name="upload">ارسال</string>
+    <string name="per_second">%1$s/ث</string>
+    <string-array name="byte_units">
+        <item>بایت</item>
+        <item>KB</item>
+        <item>MB</item>
+        <item>GB</item>
+        <item>TB</item>
+    </string-array>
+    <string name="latency">تأخیر</string>
+    <string name="ms">%1$s میلی‌ثانیه</string>
+    <string name="exit_unknown">محل خروج</string>
+    <string name="exit_checking">در حال بررسی…</string>
+    <string name="test_failed">درخواست آزمایشی از تونل رد نشد.</string>
+
+    <string name="route">مسیر</string>
+    <string name="proto_masque_hint">شبیه ترافیک معمولی وب است. بهترین انتخاب اول.</string>
+    <string name="proto_wg_hint">سریع‌ترین، برای شبکه‌هایی که ترافیک را دقیق بررسی نمی‌کنند.</string>
+    <string name="proto_gool_hint">WireGuard داخل MASQUE، برای گرفتن آی‌پی خروجی دیگر.</string>
+    <string name="proto_mim_hint">دو لایه MASQUE، برای گرفتن آی‌پی خروجی دیگر.</string>
+    <string name="proto_psiphon_hint">شبکه‌ی سایفون، بدون WARP.</string>
+    <string name="proto_tor_hint">شبکه‌ی Tor، با پل وقتی Tor بسته است. کند است.</string>
+
+    <string name="proxy_addresses">نشانی پراکسی برای برنامه‌های دیگر</string>
+    <string name="copy">کپی</string>
+    <string name="copied">کپی شد</string>
+    <string name="share">ارسال</string>
+    <string name="clear">پاک کردن</string>
+    <string name="back">بازگشت</string>
+    <string name="cancel">انصراف</string>
+    <string name="save">ذخیره</string>
+    <string name="ok">باشه</string>
+    <string name="later">بعداً</string>
+
+    <string name="log_all">همه</string>
+    <string name="log_problems">هشدارها و خطاها</string>
+    <string name="log_empty">هنوز چیزی نیست. کارهایی که هسته هنگام اتصال انجام می‌دهد اینجا دیده می‌شود.</string>
+
+    <string name="notif_traffic">↓ %1$s   ↑ %2$s</string>
+    <string name="notif_wait">برای باز کردن لمس کنید</string>
+
+    <!-- settings -->
+    <string name="sec_connection">اتصال</string>
+    <string name="sec_vpn">VPN</string>
+    <string name="sec_proxy">پراکسی</string>
+    <string name="sec_advanced">پیشرفته</string>
+    <string name="sec_look">ظاهر</string>
+    <string name="sec_about">درباره</string>
+
+    <string name="set_protocol">مسیر</string>
+    <string name="set_transport">نوع انتقال MASQUE</string>
+    <string name="transport_h3">HTTP/3 (QUIC)</string>
+    <string name="transport_h3_hint">پیش‌فرض. از UDP استفاده می‌کند.</string>
+    <string name="transport_h2">HTTP/2 (TCP)</string>
+    <string name="transport_h2_hint">برای شبکه‌هایی که UDP را می‌بندند یا کند می‌کنند.</string>
+    <string name="set_scan">جستجو</string>
+    <string name="scan_turbo">سریع</string>
+    <string name="scan_turbo_hint">اولین درگاهی که جواب بدهد را برمی‌دارد.</string>
+    <string name="scan_balanced">متعادل</string>
+    <string name="scan_balanced_hint">چند درگاه پیدا می‌کند و سریع‌ترین را نگه می‌دارد. پیش‌فرض.</string>
+    <string name="scan_thorough">کامل</string>
+    <string name="scan_thorough_hint">همه‌ی بازه‌ها را می‌گردد، برای وقتی که همه‌چیز بسته به نظر می‌رسد.</string>
+    <string name="scan_verified">تأییدشده</string>
+    <string name="scan_verified_hint">فقط درگاه‌هایی که کار کردنشان سنجیده شده.</string>
+    <string name="scan_ironclad">قطعی</string>
+    <string name="scan_ironclad_hint">با هر درگاه یک تونل واقعی باز می‌کند. کندترین و مطمئن‌ترین.</string>
+    <string name="set_ip">نسخه‌ی IP</string>
+    <string name="ip_v4">IPv4</string>
+    <string name="ip_v6">IPv6</string>
+    <string name="ip_dual">IPv4 و IPv6</string>
+    <string name="set_noize">پنهان‌سازی ترافیک</string>
+    <string name="noize_auto">خودکار</string>
+    <string name="noize_off">خاموش</string>
+    <string name="noize_light">سبک</string>
+    <string name="noize_firewall">فایروال</string>
+    <string name="noize_balanced">متعادل</string>
+    <string name="noize_gfw">قوی (GFW)</string>
+    <string name="noize_gfw_hint">وقتی «خودکار» رد نمی‌شود این را امتحان کنید.</string>
+    <string name="noize_aggressive">خیلی قوی</string>
+    <string name="set_fragment">تکه‌تکه کردن دست‌دادن TLS</string>
+    <string name="set_fragment_hint">ثبت‌نام WARP را از فیلتری که آن را قطع می‌کند (مثل ایران) رد می‌کند.</string>
+    <string name="set_quick">استفاده از آخرین درگاه سالم</string>
+    <string name="set_quick_hint">اگر درگاه قبلی هنوز کار کند، جستجو انجام نمی‌شود.</string>
+
+    <string name="set_apps">برنامه‌هایی که از VPN رد می‌شوند</string>
+    <string name="apps_all">همه‌ی برنامه‌ها</string>
+    <string name="apps_only">فقط برنامه‌های انتخاب‌شده</string>
+    <string name="apps_except">همه به جز برنامه‌های انتخاب‌شده</string>
+    <string name="apps_count">%1$s انتخاب‌شده</string>
+    <string name="set_choose_apps">انتخاب برنامه‌ها</string>
+    <string name="apps_only_hint">فقط این برنامه‌ها از VPN رد می‌شوند.</string>
+    <string name="apps_except_hint">این برنامه‌ها بدون VPN کار می‌کنند.</string>
+    <string name="search_apps">جستجوی برنامه</string>
+    <string name="show_system">نمایش برنامه‌های سیستمی</string>
+    <string name="set_bypass_lan">شبکه‌ی محلی مستقیم بماند</string>
+    <string name="set_bypass_lan_hint">پرینتر، مودم و پخش روی تلویزیون کار می‌کنند. اندروید ۱۳ به بعد.</string>
+
+    <string name="set_socks_port">پورت SOCKS5</string>
+    <string name="set_http">پراکسی HTTP</string>
+    <string name="set_http_hint">برای برنامه‌هایی که SOCKS5 را پشتیبانی نمی‌کنند.</string>
+    <string name="set_http_port">پورت HTTP</string>
+    <string name="set_lan">اشتراک با دستگاه‌های همین شبکه</string>
+    <string name="set_lan_hint">دستگاه‌های دیگر روی همین وای‌فای می‌توانند از پراکسی استفاده کنند؛ هر کسی که روی آن باشد.</string>
+    <string name="port_hint">عددی از ۱۰۲۴ تا ۶۵۵۳۵.</string>
+
+    <string name="set_peer">درگاه ثابت</string>
+    <string name="peer_auto">با جستجو پیدا می‌شود</string>
+    <string name="peer_hint">نشانی و پورت درگاهی که روی شبکه‌ی شما کار می‌کند. جستجو انجام نمی‌شود. برای جستجو خالی بگذارید.</string>
+    <string name="set_dns">DNS داخل تونل</string>
+    <string name="dns_hint">نشانی‌ها را با ویرگول انگلیسی جدا کنید.</string>
+    <string name="set_exit">کشورهای خروجی</string>
+    <string name="exit_hint">کد دوحرفی کشورها با ویرگول انگلیسی. DE,NL یعنی فقط این‌ها. !IR,RU یعنی همه به جز این‌ها.</string>
+    <string name="set_region">کشور خروجی سایفون</string>
+    <string name="region_hint">کد دوحرفی مثل DE. اگر خالی باشد، سایفون خودش انتخاب می‌کند.</string>
+    <string name="set_extra">گزینه‌های اضافه‌ی هسته</string>
+    <string name="extra_hint">همان‌طور که نوشته شود به هسته‌ی Aether داده می‌شود؛ برای گزینه‌هایی که اینجا نیستند.</string>
+    <string name="not_set">تنظیم نشده</string>
+    <string name="err_bad_value">این مقدار درست نیست</string>
+    <string name="set_reset">ساختن دوباره‌ی حساب WARP</string>
+    <string name="set_reset_hint">حساب و درگاه‌های ذخیره‌شده پاک می‌شوند. در اتصال بعدی حساب تازه ساخته می‌شود.</string>
+    <string name="reset_confirm">حساب WARP فعلی و درگاه‌های ذخیره‌شده‌ی آن پاک می‌شوند. وقتی کلادفلر مدام حساب را رد می‌کند از این استفاده کنید.</string>
+    <string name="reset_action">پاک کردن</string>
+    <string name="reset_done">حساب پاک شد</string>
+
+    <string name="set_theme">پوسته</string>
+    <string name="theme_system">مثل گوشی</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تیره</string>
+    <string name="set_lang">زبان</string>
+
+    <string name="about_version">نسخه‌ی %1$s · هسته %2$s</string>
+    <string name="set_check_update">بررسی نسخه‌ی جدید</string>
+    <string name="set_auto_update">بررسی نسخه‌ی جدید هنگام باز شدن برنامه</string>
+    <string name="about_source">کد برنامه</string>
+    <string name="about_core">Aether</string>
+    <string name="about_core_hint">هسته‌ی متن‌باز این برنامه، ساخته‌ی CluvexStudio</string>
+    <string name="about_license">Nimbus نرم‌افزار آزاد با مجوز GNU AGPL 3.0 است و هسته‌ی Aether از CluvexStudio، hev-socks5-tunnel، سایفون و lyrebird را اجرا می‌کند. Nimbus ساخته‌ی پروژه‌ی Aether نیست و به آن وابسته نیست.</string>
+
+    <!-- updates -->
+    <string name="update_title">نسخه‌ی جدید</string>
+    <string name="update_checking">در حال بررسی گیت‌هاب…</string>
+    <string name="update_none">آخرین نسخه نصب است (%1$s).</string>
+    <string name="update_failed">بررسی انجام نشد: %1$s</string>
+    <string name="update_available">نسخه‌ی %1$s آماده است</string>
+    <string name="update_current">نسخه‌ی نصب‌شده: %1$s · حجم دانلود: %2$s</string>
+    <string name="update_download">دانلود و نصب</string>
+    <string name="update_downloading">در حال دانلود…</string>
+    <string name="update_install">نصب</string>
+
+    <!-- errors -->
+    <string name="err_vpn_permission">اجازه‌ی VPN داده نشد.</string>
+    <string name="err_missing_native">بخشی از برنامه برای این گوشی نیست. نسخه‌ی مخصوص گوشی خود یا نسخه‌ی universal را نصب کنید.</string>
+    <string name="err_port_busy">پورت %1$d دست برنامه‌ی دیگری است. آن را در تنظیمات عوض کنید.</string>
+    <string name="err_core_start">هسته اجرا نشد: %1$s</string>
+    <string name="err_core_exit">هسته متوقف شد (کد %1$d).</string>
+    <string name="err_tun">VPN راه‌اندازی نشد: %1$s</string>
+    <string name="err_hint_args">یکی از گزینه‌ها درست نیست. «گزینه‌های اضافه‌ی هسته» را بررسی کنید.</string>
+    <string name="err_hint_refused">کلادفلر این شبکه را نپذیرفت. کمی بعد دوباره امتحان کنید، شبکه را عوض کنید، یا حساب WARP را دوباره بسازید.</string>
+    <string name="err_hint_dns">نشانی کلادفلر پیدا نشد. اینترنت گوشی را بررسی کنید.</string>
+    <string name="err_hint_register">حساب WARP ساخته نشد. «تکه‌تکه کردن دست‌دادن TLS» را روشن کنید یا شبکه‌ی دیگری را امتحان کنید.</string>
+    <string name="err_hint_scan">درگاه سالمی پیدا نشد. جستجوی «کامل»، HTTP/2 یا پنهان‌سازی «قوی» را امتحان کنید.</string>
+    <string name="err_hint_port">پورت پراکسی دست برنامه‌ی دیگری است. آن را در تنظیمات عوض کنید.</string>
+    <string name="err_hint_exit">تونل از کشوری خارج شد که آن را نخواسته‌اید.</string>
+</resources>

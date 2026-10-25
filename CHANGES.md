@@ -1,0 +1,2 @@
+- First release: one-tap connection over MASQUE, WireGuard, Gool, MASQUE-in-MASQUE, Psiphon or Tor, as a full-phone VPN or a local proxy.
+- نسخه‌ی اول: اتصال با یک لمس از راه MASQUE، WireGuard، Gool، MASQUE دولایه، سایفون یا Tor؛ به‌صورت VPN برای کل گوشی یا پراکسی.

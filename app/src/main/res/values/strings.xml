@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Nimbus</string>
+    <string name="channel_connection">Connection</string>
+
+    <string name="tab_home">Home</string>
+    <string name="tab_log">Log</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="mode_vpn">VPN</string>
+    <string name="mode_proxy">Proxy</string>
+
+    <string name="state_idle">Not connected</string>
+    <string name="state_connecting">Connecting…</string>
+    <string name="state_connected">Connected</string>
+    <string name="state_reconnecting">Reconnecting…</string>
+    <string name="state_stopping">Disconnecting…</string>
+    <string name="state_failed">Could not connect</string>
+
+    <string name="stage_preparing">Getting ready…</string>
+    <string name="stage_registering">Creating a WARP account…</string>
+    <string name="stage_scanning">Looking for an open route…</string>
+    <string name="stage_connecting">Opening the tunnel…</string>
+
+    <string name="hint_tap">Tap to connect</string>
+    <string name="hint_wait">On a filtered network the first connection can take a minute.</string>
+
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="action_reconnect">Reconnect</string>
+    <string name="action_view_log">View log</string>
+    <string name="action_test">Test again</string>
+
+    <string name="settings_changed">Settings changed. Reconnect to use them.</string>
+
+    <string name="download">Download</string>
+    <string name="upload">Upload</string>
+    <string name="per_second">%1$s/s</string>
+    <string-array name="byte_units">
+        <item>B</item>
+        <item>KB</item>
+        <item>MB</item>
+        <item>GB</item>
+        <item>TB</item>
+    </string-array>
+    <string name="latency">Delay</string>
+    <string name="ms">%1$s ms</string>
+    <string name="exit_unknown">Exit location</string>
+    <string name="exit_checking">Checking…</string>
+    <string name="test_failed">The test request did not get through the tunnel.</string>
+
+    <string name="route">Route</string>
+    <string name="proto_masque_hint">Looks like ordinary web traffic. The best first choice.</string>
+    <string name="proto_wg_hint">Fastest, for networks that do not inspect traffic closely.</string>
+    <string name="proto_gool_hint">WireGuard inside MASQUE, for a different exit address.</string>
+    <string name="proto_mim_hint">Two MASQUE hops, for a different exit address.</string>
+    <string name="proto_psiphon_hint">The Psiphon network, without WARP.</string>
+    <string name="proto_tor_hint">The Tor network, with bridges when Tor is blocked. Slow.</string>
+
+    <string name="proxy_addresses">Proxy addresses for other apps</string>
+    <string name="copy">Copy</string>
+    <string name="copied">Copied</string>
+    <string name="share">Share</string>
+    <string name="clear">Clear</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="ok">OK</string>
+    <string name="later">Later</string>
+
+    <string name="log_all">All</string>
+    <string name="log_problems">Warnings and errors</string>
+    <string name="log_empty">Nothing yet. What the core does while connecting shows up here.</string>
+
+    <string name="notif_traffic">↓ %1$s   ↑ %2$s</string>
+    <string name="notif_wait">Tap to open</string>
+
+    <!-- settings -->
+    <string name="sec_connection">Connection</string>
+    <string name="sec_vpn">VPN</string>
+    <string name="sec_proxy">Proxy</string>
+    <string name="sec_advanced">Advanced</string>
+    <string name="sec_look">Appearance</string>
+    <string name="sec_about">About</string>
+
+    <string name="set_protocol">Route</string>
+    <string name="set_transport">MASQUE transport</string>
+    <string name="transport_h3">HTTP/3 (QUIC)</string>
+    <string name="transport_h3_hint">Default. Uses UDP.</string>
+    <string name="transport_h2">HTTP/2 (TCP)</string>
+    <string name="transport_h2_hint">For networks that block or slow down UDP.</string>
+    <string name="set_scan">Scan</string>
+    <string name="scan_turbo">Fast</string>
+    <string name="scan_turbo_hint">Takes the first gateway that answers.</string>
+    <string name="scan_balanced">Balanced</string>
+    <string name="scan_balanced_hint">Collects a few and keeps the fastest. Default.</string>
+    <string name="scan_thorough">Thorough</string>
+    <string name="scan_thorough_hint">Sweeps whole ranges, for when everything seems blocked.</string>
+    <string name="scan_verified">Verified</string>
+    <string name="scan_verified_hint">Only gateways measured to work, never a guessed neighbour.</string>
+    <string name="scan_ironclad">Ironclad</string>
+    <string name="scan_ironclad_hint">Opens a real tunnel to each candidate. Slowest, most certain.</string>
+    <string name="set_ip">IP version</string>
+    <string name="ip_v4">IPv4</string>
+    <string name="ip_v6">IPv6</string>
+    <string name="ip_dual">IPv4 and IPv6</string>
+    <string name="set_noize">Obfuscation</string>
+    <string name="noize_auto">Automatic</string>
+    <string name="noize_off">Off</string>
+    <string name="noize_light">Light</string>
+    <string name="noize_firewall">Firewall</string>
+    <string name="noize_balanced">Balanced</string>
+    <string name="noize_gfw">Strong (GFW)</string>
+    <string name="noize_gfw_hint">Try this when Automatic does not get through.</string>
+    <string name="noize_aggressive">Aggressive</string>
+    <string name="set_fragment">Split the TLS handshake</string>
+    <string name="set_fragment_hint">Gets the WARP sign-up past filters that reset it, as Iran\'s does.</string>
+    <string name="set_quick">Reuse the last working gateway</string>
+    <string name="set_quick_hint">Skips the scan when the last gateway still works.</string>
+
+    <string name="set_apps">Apps that use the VPN</string>
+    <string name="apps_all">All apps</string>
+    <string name="apps_only">Only chosen apps</string>
+    <string name="apps_except">All apps except chosen ones</string>
+    <string name="apps_count">%1$s chosen</string>
+    <string name="set_choose_apps">Choose apps</string>
+    <string name="apps_only_hint">Only these apps go through the VPN.</string>
+    <string name="apps_except_hint">These apps bypass the VPN.</string>
+    <string name="search_apps">Search apps</string>
+    <string name="show_system">Show system apps</string>
+    <string name="set_bypass_lan">Keep the local network direct</string>
+    <string name="set_bypass_lan_hint">Printers, routers and casting keep working. Android 13 and later.</string>
+
+    <string name="set_socks_port">SOCKS5 port</string>
+    <string name="set_http">HTTP proxy</string>
+    <string name="set_http_hint">For apps that cannot use SOCKS5.</string>
+    <string name="set_http_port">HTTP port</string>
+    <string name="set_lan">Share with devices on this network</string>
+    <string name="set_lan_hint">Other devices on the same Wi-Fi can use the proxy. Anyone on it can.</string>
+    <string name="port_hint">A number from 1024 to 65535.</string>
+
+    <string name="set_peer">Fixed gateway</string>
+    <string name="peer_auto">Found by scanning</string>
+    <string name="peer_hint">Address and port of a gateway that works on your network. The scan is skipped. Leave empty to scan.</string>
+    <string name="set_dns">DNS inside the tunnel</string>
+    <string name="dns_hint">Addresses separated by commas.</string>
+    <string name="set_exit">Exit countries</string>
+    <string name="exit_hint">Two-letter codes separated by commas. DE,NL allows only those; !IR,RU refuses those.</string>
+    <string name="set_region">Psiphon exit country</string>
+    <string name="region_hint">A two-letter code such as DE. Empty lets Psiphon choose.</string>
+    <string name="set_extra">Extra core options</string>
+    <string name="extra_hint">Passed to the Aether core as they are, for options not shown here.</string>
+    <string name="not_set">Not set</string>
+    <string name="err_bad_value">This value is not valid</string>
+    <string name="set_reset">Reset WARP account</string>
+    <string name="set_reset_hint">Deletes the account and saved gateways. A new account is made on the next connection.</string>
+    <string name="reset_confirm">The current WARP account and the gateways saved for it will be deleted. Use this when Cloudflare keeps refusing the account.</string>
+    <string name="reset_action">Delete</string>
+    <string name="reset_done">Account deleted</string>
+
+    <string name="set_theme">Theme</string>
+    <string name="theme_system">Same as the phone</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="set_lang">Language</string>
+
+    <string name="about_version">Version %1$s · core %2$s</string>
+    <string name="set_check_update">Check for updates</string>
+    <string name="set_auto_update">Check for updates when the app opens</string>
+    <string name="about_source">Source code</string>
+    <string name="about_core">Aether</string>
+    <string name="about_core_hint">The open-source core this app runs, by CluvexStudio</string>
+    <string name="about_license">Nimbus is free software under the GNU AGPL 3.0. It runs the Aether core by CluvexStudio, hev-socks5-tunnel by hev, Psiphon and lyrebird. Nimbus is not made by or affiliated with the Aether project.</string>
+
+    <!-- updates -->
+    <string name="update_title">Updates</string>
+    <string name="update_checking">Checking GitHub…</string>
+    <string name="update_none">You have the latest version (%1$s).</string>
+    <string name="update_failed">Could not check for updates: %1$s</string>
+    <string name="update_available">Version %1$s is available</string>
+    <string name="update_current">Installed: %1$s · download: %2$s</string>
+    <string name="update_download">Download and install</string>
+    <string name="update_downloading">Downloading…</string>
+    <string name="update_install">Install</string>
+
+    <!-- errors -->
+    <string name="err_vpn_permission">VPN permission was not given.</string>
+    <string name="err_missing_native">Part of the app is missing for this phone. Install the APK made for your phone, or the universal one.</string>
+    <string name="err_port_busy">Port %1$d is in use by another app. Change it in Settings.</string>
+    <string name="err_core_start">The core could not start: %1$s</string>
+    <string name="err_core_exit">The core stopped (code %1$d).</string>
+    <string name="err_tun">The VPN could not start: %1$s</string>
+    <string name="err_hint_args">An option is not valid. Check Extra core options.</string>
+    <string name="err_hint_refused">Cloudflare refused this network. Try again later, switch network, or reset the WARP account.</string>
+    <string name="err_hint_dns">Cloudflare\'s address could not be looked up. Check the internet connection.</string>
+    <string name="err_hint_register">The WARP account could not be made. Turn on Split the TLS handshake, or try another network.</string>
+    <string name="err_hint_scan">No working gateway was found. Try Thorough scan, HTTP/2, or Strong obfuscation.</string>
+    <string name="err_hint_port">The proxy port is in use. Change it in Settings.</string>
+    <string name="err_hint_exit">The tunnel left from a country you excluded.</string>
+</resources>
