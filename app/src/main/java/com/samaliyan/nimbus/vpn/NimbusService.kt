@@ -220,9 +220,21 @@ class NimbusService : VpnService() {
             .firstOrNull { !portFree(it) }
         if (busy != null) return fail(t.getString(R.string.err_port_busy, busy))
 
+        var psiphonConfig: String? = null
+        if (settings.protocol == Protocol.PSIPHON) {
+            val f = File(workDir, "psiphon-overrides.json")
+            runCatching {
+                workDir.mkdirs()
+                f.writeText(CoreArgs.psiphonOverrides(systemDnsServers()))
+                psiphonConfig = f.absolutePath
+            }
+        }
         val launch = CoreArgs.build(
             settings,
-            CorePaths(core.absolutePath, psiphon?.absolutePath, lyrebird?.absolutePath, workDir.absolutePath, tmp.absolutePath),
+            CorePaths(
+                core.absolutePath, psiphon?.absolutePath, lyrebird?.absolutePath,
+                workDir.absolutePath, tmp.absolutePath, psiphonConfig,
+            ),
         )
         Tunnel.note("starting: " + masked(launch.args.drop(1)).joinToString(" "))
         try {
@@ -513,6 +525,12 @@ class NimbusService : VpnService() {
             }
         }
     }
+
+    /** The DNS servers of the network the phone uses now (this app is outside the VPN). */
+    private fun systemDnsServers(): List<String> = runCatching {
+        val cm = getSystemService(android.net.ConnectivityManager::class.java)
+        cm.getLinkProperties(cm.activeNetwork)?.dnsServers.orEmpty().mapNotNull { it.hostAddress }
+    }.getOrDefault(emptyList())
 
     private fun portFree(port: Int): Boolean = runCatching {
         ServerSocket().use { it.reuseAddress = true; it.bind(InetSocketAddress(CoreArgs.bindHost(settings), port)) }

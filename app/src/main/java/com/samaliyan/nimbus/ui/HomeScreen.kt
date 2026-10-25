@@ -147,6 +147,7 @@ fun HomeScreen(
                         selected = settings.connMode == mode,
                         onClick = {
                             if (settings.connMode != mode) {
+                                if (state is TunnelState.Failed) Tunnel.setState(TunnelState.Idle)
                                 SettingsStore.update { it.copy(connMode = mode) }
                                 if (active) onReconnect()
                             }
@@ -229,6 +230,8 @@ fun HomeScreen(
             selected = settings.protocol,
             onSelect = { p ->
                 if (p != settings.protocol) {
+                    // The last failure was about the old route.
+                    if (state is TunnelState.Failed) Tunnel.setState(TunnelState.Idle)
                     SettingsStore.update { it.copy(protocol = p) }
                     if (active) onReconnect()
                 }

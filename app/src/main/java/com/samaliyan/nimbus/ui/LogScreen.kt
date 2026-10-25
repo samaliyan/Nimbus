@@ -66,7 +66,8 @@ fun LogScreen(snackbar: SnackbarHostState) {
     val shown by remember(logs, problemsOnly) {
         derivedStateOf { if (problemsOnly) logs.filter { it.level == Level.WARN || it.level == Level.ERROR } else logs }
     }
-    val list = rememberLazyListState()
+    // Opens at the newest line.
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = (shown.size - 1).coerceAtLeast(0))
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 

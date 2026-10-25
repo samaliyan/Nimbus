@@ -7,6 +7,8 @@ data class CorePaths(
     val lyrebird: String?,
     val home: String,
     val tmp: String,
+    /** Psiphon settings laid over the core's own; see [psiphonOverrides]. */
+    val psiphonConfig: String? = null,
 )
 
 data class CoreLaunch(val args: List<String>, val env: Map<String, String>)
@@ -65,6 +67,9 @@ object CoreArgs {
         if (s.protocol == Protocol.PSIPHON) {
             val region = s.psiphonRegion.trim().uppercase()
             if (region.isNotEmpty()) a += listOf("--psiphon-region", region)
+            if (paths.psiphonConfig != null && !s.extraArgs.contains("--psiphon-config")) {
+                a += listOf("--psiphon-config", paths.psiphonConfig)
+            }
         }
 
         val dns = s.dns.replace(" ", "")
@@ -86,6 +91,17 @@ object CoreArgs {
                 .joinToString(";") { "$it=$pt" }
         }
         return CoreLaunch(listOf(paths.core) + a, env)
+    }
+
+    /**
+     * Psiphon is a Go program, and Go finds DNS servers in /etc/resolv.conf, which Android does
+     * not have; without servers named here it cannot look up anything. [servers] are the phone's
+     * own DNS servers, with public ones as the fallback.
+     */
+    fun psiphonOverrides(servers: List<String>): String {
+        val list = servers.filter { Validate.isIpv4(it) || Validate.isIpv6(it) }.distinct()
+            .ifEmpty { listOf("1.1.1.1", "8.8.8.8", "9.9.9.9") }
+        return "{\"DNSResolverAlternateServers\":[" + list.joinToString(",") { "\"$it\"" } + "]}"
     }
 
     /** Splits a command line the way a shell would for plain words and "quoted" or 'quoted' parts. */

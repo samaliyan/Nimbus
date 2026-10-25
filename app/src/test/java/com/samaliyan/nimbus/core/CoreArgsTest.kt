@@ -65,6 +65,21 @@ class CoreArgsTest {
         assertFalse("--http-proxy" in a)
     }
 
+    @Test fun psiphonGetsDnsServers() {
+        val withConfig = paths.copy(psiphonConfig = "/data/core/psiphon.json")
+        val a = CoreArgs.build(Settings(protocol = Protocol.PSIPHON), withConfig).args
+        assertEquals("/data/core/psiphon.json", a[a.indexOf("--psiphon-config") + 1])
+        assertFalse("--psiphon-config" in CoreArgs.build(Settings(protocol = Protocol.MASQUE), withConfig).args)
+        // A config of the user's own wins.
+        val own = CoreArgs.build(Settings(protocol = Protocol.PSIPHON, extraArgs = "--psiphon-config /x.json"), withConfig).args
+        assertEquals(1, own.count { it == "--psiphon-config" })
+
+        val json = org.json.JSONObject(CoreArgs.psiphonOverrides(listOf("192.168.1.1", "fe80::1%wlan0", "192.168.1.1")))
+        assertEquals("[\"192.168.1.1\"]", json.getJSONArray("DNSResolverAlternateServers").toString())
+        val fallback = org.json.JSONObject(CoreArgs.psiphonOverrides(emptyList()))
+        assertEquals(3, fallback.getJSONArray("DNSResolverAlternateServers").length())
+    }
+
     @Test fun torOnly() {
         val launch = CoreArgs.build(Settings(protocol = Protocol.TOR), paths)
         assertTrue("--tor-only" in launch.args)

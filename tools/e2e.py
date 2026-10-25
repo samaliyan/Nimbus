@@ -164,6 +164,21 @@ def main(apk):
         ui.tap("Home", exact=True)
     disconnect("Not connected", "Disconnect")
 
+    # ---- Tor in proxy mode ----
+    ui.tap("Proxy", exact=True)
+    ui.tap("Tor", exact=True, scroll=True)
+    ok, secs = connect_and_wait("Connected", 300, "13-tor")
+    record("Tor connects (proxy mode)", ok, f"in {secs}s", required=False)
+    if ok:
+        out = trace_through_proxy(1819)
+        record("Tor proxy carries traffic", bool(field(out, "ip")), f"ip={field(out, 'ip')} loc={field(out, 'loc')}", required=False)
+    else:
+        ui.tap("Log", exact=True)
+        ui.shot("13-tor-log")
+        ui.tap("Home", exact=True)
+    disconnect("Not connected", "Disconnect")
+    ui.tap("VPN", exact=True)
+
     # Back to the defaults a new user sees, and a light-theme English shot for the README.
     ui.tap("MASQUE", exact=True, scroll=True)
     ui.tap("Settings", exact=True)
